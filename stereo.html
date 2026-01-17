@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ADAM - Kaizen 1 v23</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            background-color: #12131a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, var(--cell));
+            grid-template-rows: repeat(4, var(--cell));
+            gap: var(--gap);
+            --cell: min(80px, 20vw);
+            --gap: 8px;
+        }
+        
+        .undo-button {
+            background: rgba(34, 211, 238, 0.15);
+            border: 2px solid rgba(34, 211, 238, 0.4);
+            border-radius: 12px;
+            color: #22d3ee;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 32px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .undo-button:hover {
+            background: rgba(34, 211, 238, 0.25);
+            border-color: rgba(34, 211, 238, 0.6);
+            transform: scale(1.05);
+        }
+        
+        .undo-button:active {
+            transform: scale(0.95);
+        }
+        
+        .undo-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+        
+        .cell {
+            width: var(--cell);
+            height: var(--cell);
+            position: relative;
+        }
+        
+        .square {
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow: visible;
+            cursor: pointer;
+            border-radius: 12px;
+        }
+        
+        .square.empty {
+            cursor: default;
+            border: 2px dashed rgba(180, 180, 190, 0.15);
+            border-radius: 12px;
+        }
+        
+        /* Case blanche avec liseret pour remplacer les dominos fusionnés */
+        .square.white-border {
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 12px;
+            background-color: transparent;
+        }
+        
+        @keyframes fusionPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .fusion-animation {
+            animation: fusionPulse 0.4s ease-in-out;
+        }
+        
+        .square svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        svg .separator {
+            stroke: rgba(180, 180, 190, 0.3);
+            stroke-width: 1;
+        }
+        
+        svg line.icon,
+        svg path.icon,
+        svg circle.icon,
+        svg rect.icon {
+            stroke: rgba(180, 180, 190, 0.35);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+        
+        svg circle.point {
+            fill: rgba(180, 180, 190, 0.35);
+        }
+        
+        /* Ancien système de bordures supprimé - remplacé par pseudo-éléments ci-dessus */
+        
+        /* === ÉTATS PAR FACE INDIVIDUELLE === */
+        
+        /* Face1 states */
+        .face1-white line.icon, .face1-white path.icon, 
+        .face1-white circle.icon, .face1-white rect.icon {
+            stroke: rgba(180, 180, 190, 0.35);
+        }
+        .face1-white circle.point {
+            fill: rgba(180, 180, 190, 0.35);
+        }
+        
+        .face1-silver line.icon, .face1-silver path.icon, 
+        .face1-silver circle.icon, .face1-silver rect.icon {
+            stroke: #22d3ee;
+            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
+        }
+        .face1-silver circle.point {
+            fill: #22d3ee;
+            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
+        }
+        
+        .face1-gold line.icon, .face1-gold path.icon, 
+        .face1-gold circle.icon, .face1-gold rect.icon {
+            stroke: #ffd700;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+        }
+        .face1-gold circle.point {
+            fill: #ffd700;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+        }
+        
+        .face1-emerald line.icon, .face1-emerald path.icon, 
+        .face1-emerald circle.icon, .face1-emerald rect.icon {
+            stroke: #34d399;
+            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
+        }
+        .face1-emerald circle.point {
+            fill: #34d399;
+            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
+        }
+        
+        .face1-cosmic line.icon, .face1-cosmic path.icon, 
+        .face1-cosmic circle.icon, .face1-cosmic rect.icon {
+            stroke: #c4b5fd;
+            filter: drop-shadow(0 0 8px rgba(131, 56, 236, 0.9));
+        }
+        .face1-cosmic circle.point {
+            fill: #c4b5fd;
+            filter: drop-shadow(0 0 8px rgba(131, 56, 236, 0.9));
+        }
+        
+        /* Face2 states */
+        .face2-white line.icon, .face2-white path.icon, 
+        .face2-white circle.icon, .face2-white rect.icon {
+            stroke: rgba(180, 180, 190, 0.35);
+        }
+        .face2-white circle.point {
+            fill: rgba(180, 180, 190, 0.35);
+        }
+        
+        .face2-silver line.icon, .face2-silver path.icon, 
+        .face2-silver circle.icon, .face2-silver rect.icon {
+            stroke: #22d3ee;
+            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
+        }
+        .face2-silver circle.point {
+            fill: #22d3ee;
+            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
+        }
+        
+        .face2-gold line.icon, .face2-gold path.icon, 
+        .face2-gold circle.icon, .face2-gold rect.icon {
+            stroke: #ffd700;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+        }
+        .face2-gold circle.point {
+            fill: #ffd700;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+        }
+        
+        .face2-emerald line.icon, .face2-emerald path.icon, 
+        .face2-emerald circle.icon, .face2-emerald rect.icon {
+            stroke: #34d399;
+            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
+        }
+        .face2-emerald circle.point {
+            fill: #34d399;
+            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
+        }
+        
+        .face2-cosmic line.icon, .face2-cosmic path.icon, 
+        .face2-cosmic circle.icon, .face2-cosmic rect.icon {
+            stroke: #c4b5fd;
+            filter: drop-shadow(0 0 8px rgba(131, 56, 236, 0.9));
+        }
+        .face2-cosmic circle.point {
+            fill: #c4b5fd;
+            filter: drop-shadow(0 0 8px rgba(131, 56, 236, 0.9));
+        }
+        
+        /* Face supernovae */
+        .face1-supernovae line.icon, .face1-supernovae path.icon, 
+        .face1-supernovae circle.icon, .face1-supernovae rect.icon {
+            stroke: #ffeb3b;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 140, 0, 0.4));
+            animation: supernovaIconShift 2.5s ease-in-out infinite;
+        }
+        .face1-supernovae circle.point {
+            fill: #ffeb3b;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+            animation: supernovaPointPulse 1.2s ease-in-out infinite;
+        }
+        .face2-supernovae line.icon, .face2-supernovae path.icon, 
+        .face2-supernovae circle.icon, .face2-supernovae rect.icon {
+            stroke: #ffeb3b;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 140, 0, 0.4));
+            animation: supernovaIconShift 2.5s ease-in-out infinite;
+        }
+        .face2-supernovae circle.point {
+            fill: #ffeb3b;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+            animation: supernovaPointPulse 1.2s ease-in-out infinite;
+        }
+        
+        /* === HALOS PAR ÉTAT (bordures et box-shadow sur .square) === */
+        
+        /* BLANC - tracés subtils */
+        .square.white { border: 1px solid rgba(180, 180, 190, 0.35); }
+        .square.white svg .separator { stroke: rgba(180, 180, 190, 0.3); }
+        
+        /* ARGENT - cyan subtil avec halo */
+        .square.silver { 
+            border: 1px solid rgba(6, 182, 212, 0.6); 
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(6, 182, 212, 0.05); 
+        }
+        .square.silver svg .separator { stroke: rgba(34, 211, 238, 0.4); }
+        
+        /* OR - halo doré */
+        .square.gold { 
+            border: 1px solid rgba(255, 215, 0, 0.7); 
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 20px rgba(255, 215, 0, 0.05); 
+        }
+        .square.gold svg .separator { stroke: rgba(255, 215, 0, 0.4); }
+        
+        /* ÉMERAUDE - halo vert pulsant */
+        .square.emerald { 
+            border: 1px solid rgba(52, 211, 153, 0.9); 
+            box-shadow: 0 0 25px rgba(5, 150, 105, 0.5), 0 0 40px rgba(52, 211, 153, 0.3), inset 0 0 25px rgba(52, 211, 153, 0.1); 
+            animation: emeraldGlow 2.5s ease-in-out infinite; 
+        }
+        .square.emerald svg .separator { stroke: rgba(52, 211, 153, 0.6); }
+        @keyframes emeraldGlow {
+            0%, 100% { box-shadow: 0 0 25px rgba(5, 150, 105, 0.5), 0 0 40px rgba(52, 211, 153, 0.3), inset 0 0 25px rgba(52, 211, 153, 0.1); }
+            50% { box-shadow: 0 0 35px rgba(5, 150, 105, 0.7), 0 0 55px rgba(52, 211, 153, 0.4), inset 0 0 35px rgba(52, 211, 153, 0.15); }
+        }
+        
+        /* COSMIC - bordure arc-en-ciel rotative */
+        .square.cosmic { 
+            border: 2px solid transparent; 
+            background: linear-gradient(#12131a, #12131a) padding-box, conic-gradient(from var(--cosmic-angle, 0deg), #ff006e, #8338ec, #06b6d4, #34d399, #ffd700, #ff006e) border-box; 
+            box-shadow: 0 0 25px rgba(131, 56, 236, 0.4), 0 0 40px rgba(255, 0, 110, 0.2), 0 0 50px rgba(6, 182, 212, 0.2), inset 0 0 30px rgba(131, 56, 236, 0.1); 
+            animation: cosmicRotate 4s linear infinite, cosmicPulse 2s ease-in-out infinite; 
+        }
+        .square.cosmic svg .separator { stroke: rgba(196, 181, 253, 0.6); }
+        @property --cosmic-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes cosmicRotate { to { --cosmic-angle: 360deg; } }
+        @keyframes cosmicPulse {
+            0%, 100% { box-shadow: 0 0 25px rgba(131, 56, 236, 0.4), 0 0 40px rgba(255, 0, 110, 0.2), 0 0 50px rgba(6, 182, 212, 0.2), inset 0 0 30px rgba(131, 56, 236, 0.1); }
+            50% { box-shadow: 0 0 35px rgba(131, 56, 236, 0.6), 0 0 55px rgba(255, 0, 110, 0.35), 0 0 70px rgba(6, 182, 212, 0.3), inset 0 0 40px rgba(131, 56, 236, 0.15); }
+        }
+        @keyframes cosmicIconShift { 0%, 100% { stroke: #c4b5fd; } 33% { stroke: #22d3ee; } 66% { stroke: #f472b6; } }
+        @keyframes cosmicPointPulse { 0%, 100% { fill: #c4b5fd; } 50% { fill: #f472b6; } }
+        
+        /* SUPERNOVAE - surface solaire en fusion */
+        .square.supernovae { 
+            border: 3px solid transparent; 
+            background: linear-gradient(#12131a, #12131a) padding-box, conic-gradient(from var(--supernova-angle, 0deg), #ff4500, #ff8c00, #ffd700, #ffff00, #ff8c00, #ff4500) border-box; 
+            box-shadow: 0 0 25px rgba(255, 140, 0, 0.4), 0 0 40px rgba(255, 69, 0, 0.2), 0 0 50px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 140, 0, 0.1); 
+            animation: supernovaRotate 3s linear infinite, supernovaPulse 1.5s ease-in-out infinite; 
+        }
+        .square.supernovae svg .separator { stroke: rgba(255, 235, 59, 0.6); }
+        @property --supernova-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes supernovaRotate { to { --supernova-angle: 360deg; } }
+        @keyframes supernovaPulse {
+            0%, 100% { box-shadow: 0 0 25px rgba(255, 140, 0, 0.4), 0 0 40px rgba(255, 69, 0, 0.2), 0 0 50px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 140, 0, 0.1); }
+            50% { box-shadow: 0 0 35px rgba(255, 140, 0, 0.6), 0 0 55px rgba(255, 69, 0, 0.35), 0 0 70px rgba(255, 215, 0, 0.3), inset 0 0 40px rgba(255, 140, 0, 0.15); }
+        }
+        @keyframes supernovaIconShift { 
+            0%, 100% { stroke: #ffeb3b; } 
+            25% { stroke: #ff8c00; } 
+            50% { stroke: #ffd700; } 
+            75% { stroke: #ff6347; } 
+        }
+        @keyframes supernovaPointPulse { 
+            0%, 100% { fill: #ffeb3b; } 
+            33% { fill: #ff8c00; } 
+            66% { fill: #ffd700; } 
+        }
+    </style>
+</head>
+<body>
+    <div class="grid" id="grid"></div>
+    <button class="undo-button" id="undoBtn">↶ Annuler</button>
+
+    <script>
+        // ============================================
+        // ██████╗ ███████╗ ██████╗ ██╗     ███████╗███████╗    ██████╗ ██╗   ██╗         ██╗███████╗██╗   ██╗
+        // ██╔══██╗██╔════╝██╔════╝ ██║     ██╔════╝██╔════╝    ██╔══██╗██║   ██║         ██║██╔════╝██║   ██║
+        // ██████╔╝█████╗  ██║  ███╗██║     ███████╗███████╗    ██║  ██║██║   ██║         ██║█████╗  ██║   ██║
+        // ██╔══██╗██╔══╝  ██║   ██║██║     ╚════██║╚════██║    ██║  ██║██║   ██║    ██   ██║██╔══╝  ██║   ██║
+        // ██║  ██║███████╗╚██████╔╝███████╗███████║███████║    ██████╔╝╚██████╔╝    ╚█████╔╝███████╗╚██████╔╝
+        // ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝    ╚═════╝  ╚═════╝      ╚════╝ ╚══════╝ ╚═════╝ 
+        // ============================================
+        
+        /* 
+        ═══════════════════════════════════════════════════════════════════════════════
+        RÈGLES DU JEU ADAM - DOCUMENTATION COMPLÈTE
+        ═══════════════════════════════════════════════════════════════════════════════
+        
+        1. TYPES DE DOMINOS
+        ───────────────────────────────────────────────────────────────────────────────
+        • DOMINO DOUBLE : 2 faces avec symboles et états individuels (face1State, face2State)
+        • DOMINO UNIQUE : 1 seule face avec symbole et état, bordure complète colorée
+        • CASE BLANCHE : Case vide avec liseret blanc, disponible pour recyclage
+        
+        2. CONTRÔLES & MOUVEMENTS
+        ───────────────────────────────────────────────────────────────────────────────
+        • CLIC SIMPLE sur domino double → Permutation des états entre face1 et face2
+        • SWIPE DIAGONAL → Rotation individuelle du domino (90°)
+        • SWIPE HORIZONTAL → Rotation du bloc 2x2 
+        • SWIPE VERTICAL → Rotation du bloc 2x2
+        
+        3. SYSTÈME DE TRACKING DES MOUVEMENTS
+        ───────────────────────────────────────────────────────────────────────────────
+        • lastMovedIndices[] enregistre quels dominos viennent de bouger
+        • Rotation 2x2 → les 4 indices du bloc sont marqués
+        • Rotation individuelle → seul cet indice est marqué
+        • Permutation d'états → PAS de mouvement (lastMovedIndices reste vide)
+        • Reset après chaque fusion
+        
+        4. FUSION DE DOMINOS DOUBLE (même symbole sur faces adjacentes)
+        ───────────────────────────────────────────────────────────────────────────────
+        PRINCIPE : Le domino IMMOBILE (receiver) ABSORBE l'énergie du domino MOBILE (projectile)
+        
+        RÈGLE FONDAMENTALE : Quand deux faces identiques se font face :
+        
+        • RECEIVER (immobile) :
+            → La face avec le sigle identique ABSORBE → monte d'un état
+            → L'autre face reste inchangée
+        
+        • PROJECTILE (qui bouge) :
+            → Perd le sigle identique (annulé lors de la collision)
+            → Devient un DOMINO UNIQUE avec seulement le sigle restant (+ son état)
+        
+        EXEMPLE CONCRET : 
+        Domino GAUCHE (Carré-white, Triangle-emerald) à 90° → BOUGE vers la droite
+        Domino DROITE (Cercle-gold, Carré-silver) à 90° → IMMOBILE
+        
+        À 90° : face1=gauche, face2=droite
+        GAUCHE : Carré (gauche), Triangle (droite)
+        DROITE : Cercle (gauche), Carré (droite)
+        
+        Contact : les deux Carrés se touchent
+        
+        RÉSULTAT :
+        • Domino DROITE (receiver) : (Cercle-gold, Carré-GOLD) 
+          → Le Carré absorbe et passe de silver à gold
+        • Case GAUCHE (projectile) : Domino unique "Triangle-emerald"
+          → Ne garde que le sigle qui n'a pas touché
+        
+        5. FUSION DE DOMINOS UNIQUE (deux dominos uniques adjacents)
+        ───────────────────────────────────────────────────────────────────────────────
+        PRINCIPE : Le domino STATIQUE reste en place, le MOBILE vient vers lui
+        
+        CAS 1 - États identiques (ex: silver + silver)
+            → Évolution au niveau supérieur (GOLD)
+            → Nouveau domino double avec les 2 symboles, états identiques
+        
+        CAS 2 - États différents (ex: gold + silver)  
+            → PRÉSERVATION des deux états dans le domino fusionné
+            → face1State = état du receiver
+            → face2State = état du projectile
+            → state général = max(face1State, face2State)
+        
+        RÉSULTAT :
+            • Receiver : nouveau domino double avec les 2 symboles
+            • Projectile : devient case blanche
+        
+        6. ÉTATS ET PROGRESSION (LOGIQUE ADDITIVE)
+        ───────────────────────────────────────────────────────────────────────────────
+        Ordre des états : white(0) → silver(1) → gold(2) → emerald(3) → cosmic(4)
+        
+        RÈGLE DE FUSION : nouvel état = somme des états + 1
+        • white(0) + white(0) = silver(1)
+        • white(0) + silver(1) = gold(2)
+        • silver(1) + silver(1) = gold(2)
+        • silver(1) + gold(2) = emerald(3)
+        • gold(2) + gold(2) = cosmic(4)
+        
+        • Chaque face a son propre état (face1State, face2State)
+        • L'état général du domino = max(face1State, face2State)
+        • Les bordures et la médiane reflètent les états individuels
+        • Médiane = couleur de l'état le plus fort
+        
+        7. UNDO
+        ───────────────────────────────────────────────────────────────────────────────
+        • Historique de 20 états maximum
+        • Sauvegarde avant : rotation, permutation d'états
+        • Bouton désactivé si historique vide
+        
+        ═══════════════════════════════════════════════════════════════════════════════
+        */
+        
+        const COLS = 4;
+        const ROWS = 4;
+        const TOTAL = 16;
+        const ROTATION_SPEED = 400;
+        const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic', 'supernovae'];
+        
+        let grid = document.getElementById('grid');
+        let undoBtn = document.getElementById('undoBtn');
+        let isAnimating = false;
+        let isLocalRotating = false;
+        let dragState = null;
+        let dominos = [];
+        let history = [];  // Historique des états pour undo
+        const MAX_HISTORY = 20;  // Limiter l'historique
+        let lastMovedIndices = [];  // Indices des dominos qui viennent de bouger
+        
+        // Icônes niveau 1
+        const ICONS = {
+            chevron: { f1: 'M20 32L45 12L70 32', f2: 'M20 12L45 32L70 12', t: 'path' },
+            circle: { f1: '45,22,12', f2: '45,22,12', t: 'circle' },
+            twoCircles: { f1: '30,22,8|60,22,8', f2: '30,22,8|60,22,8', t: 'circles' },
+            line: { f1: '15,22,75,22', f2: '15,22,75,22', t: 'line' },
+            threeLines: { f1: '25,10,25,34|45,10,45,34|65,10,65,34', f2: '25,10,25,34|45,10,45,34|65,10,65,34', t: 'lines' },
+            twoPoints: { f1: '30,22,4|60,22,4', f2: '30,22,4|60,22,4', t: 'points' },
+            square: { f1: '25,10,40,24,3', f2: '25,10,40,24,3', t: 'rect' },
+            wave: { f1: 'M10 22Q28 6 45 22Q62 38 80 22', f2: 'M10 22Q28 6 45 22Q62 38 80 22', t: 'path' }
+        };
+        
+        const iconKeys = Object.keys(ICONS);
+        
+        function seededRandom(seed) {
+            let state = seed;
+            return function() {
+                state = (state * 1103515245 + 12345) & 0x7fffffff;
+                return state / 0x7fffffff;
+            };
+        }
+        
+        function initDominos() {
+            dominos = [];
+            
+            // Nouveau plateau : 4 symboles seulement (threeLines, square, circle, chevron)
+            // 8 fois chacun = 32 symboles pour 16 dominos (2 faces par domino)
+            const symbols = [
+                'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines',
+                'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square',
+                'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle',
+                'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron'
+            ];
+            
+            // Mélanger les symboles de manière déterministe
+            const rng = seededRandom(16384);
+            for (let i = symbols.length - 1; i > 0; i--) {
+                const j = Math.floor(rng() * (i + 1));
+                [symbols[i], symbols[j]] = [symbols[j], symbols[i]];
+            }
+            
+            // Créer les 16 dominos avec les 32 symboles mélangés
+            for (let i = 0; i < TOTAL; i++) {
+                const x = i % COLS;
+                const y = Math.floor(i / COLS);
+                dominos.push({
+                    face1: symbols[i * 2],
+                    face2: symbols[i * 2 + 1],
+                    face1State: 'white',
+                    face2State: 'white',
+                    rotation: ((x + y) % 2 === 0) ? 0 : 90,
+                    state: 'white',
+                    type: 'double'
+                });
+            }
+        }
+        
+        function renderIcon(icon, isFace2, faceState) {
+            // Face vide
+            if (icon === 'empty') return '';
+            
+            const d = ICONS[icon];
+            if (!d) return '';
+            const data = isFace2 ? d.f2 : d.f1;
+            const faceClass = isFace2 ? 'face2' : 'face1';
+            const stateClass = `${faceClass}-${faceState}`;
+            
+            if (d.t === 'path') return `<path class="icon ${stateClass}" d="${data}"/>`;
+            if (d.t === 'circle') {
+                const [cx, cy, r] = data.split(',');
+                return `<circle class="icon ${stateClass}" cx="${cx}" cy="${cy}" r="${r}"/>`;
+            }
+            if (d.t === 'line') {
+                const [x1, y1, x2, y2] = data.split(',');
+                return `<line class="icon ${stateClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+            }
+            if (d.t === 'rect') {
+                const [x, y, w, h, rx] = data.split(',');
+                return `<rect class="icon ${stateClass}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
+            }
+            if (d.t === 'lines') {
+                return data.split('|').map(p => {
+                    const [x1, y1, x2, y2] = p.split(',');
+                    return `<line class="icon ${stateClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+                }).join('');
+            }
+            return data.split('|').map(p => {
+                const v = p.split(',');
+                return (d.t === 'circles' || d.t === 'points')
+                    ? `<circle class="${d.t === 'points' ? 'point' : 'icon'} ${stateClass}" cx="${v[0]}" cy="${v[1]}" r="${v[2]}"/>`
+                    : `<line class="icon ${stateClass}" x1="${v[0]}" y1="${v[1]}" x2="${v[2]}" y2="${v[3]}"/>`;
+            }).join('');
+        }
+        
+        function renderDomino(d) {
+            // Domino Unique : symbole centré horizontalement, pas de médiane
+            if (d.type === 'unique') {
+                const stateColors = {
+                    white: 'rgba(180, 180, 190, 0.35)',
+                    silver: 'rgba(6, 182, 212, 0.6)',
+                    gold: 'rgba(255, 215, 0, 0.7)',
+                    emerald: 'rgba(52, 211, 153, 0.9)',
+                    cosmic: 'url(#cosmicGradient)',
+                    supernovae: 'url(#supernovaGradient)'
+                };
+                
+                const borderColor = stateColors[d.face1State];
+                
+                return `<svg viewBox="0 0 90 90">
+                    <defs>
+                        <linearGradient id="cosmicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ff006e"/>
+                            <stop offset="25%" style="stop-color:#8338ec"/>
+                            <stop offset="50%" style="stop-color:#06b6d4"/>
+                            <stop offset="75%" style="stop-color:#34d399"/>
+                            <stop offset="100%" style="stop-color:#ffd700"/>
+                        </linearGradient>
+                        <linearGradient id="supernovaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ff4500"/>
+                            <stop offset="25%" style="stop-color:#ff8c00"/>
+                            <stop offset="50%" style="stop-color:#ffd700"/>
+                            <stop offset="75%" style="stop-color:#ffff00"/>
+                            <stop offset="100%" style="stop-color:#ff8c00"/>
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Bordure complète -->
+                    <rect x="1" y="1" width="88" height="88" rx="11" fill="none" stroke="${borderColor}" stroke-width="2"/>
+                    
+                    <!-- Symbole centré horizontalement -->
+                    <g class="face1-${d.face1State}" transform="translate(0,22.5)">${renderIcon(d.face1, false, d.face1State)}</g>
+                </svg>`;
+            }
+            
+            // Domino classique à deux faces
+            // Déterminer les couleurs de bordure selon les états
+            const borderColors = {
+                white: 'rgba(180, 180, 190, 0.35)',
+                silver: 'rgba(6, 182, 212, 0.6)',
+                gold: 'rgba(255, 215, 0, 0.7)',
+                emerald: 'rgba(52, 211, 153, 0.9)',
+                cosmic: 'url(#cosmicGradient)',
+                supernovae: 'url(#supernovaGradient)'
+            };
+            
+            // Couleurs pour la médiane (sans url() pour cosmic/supernovae)
+            const medianeColors = {
+                white: 'rgba(180, 180, 190, 0.35)',
+                silver: 'rgba(6, 182, 212, 0.6)',
+                gold: 'rgba(255, 215, 0, 0.7)',
+                emerald: 'rgba(52, 211, 153, 0.9)',
+                cosmic: 'rgba(196, 181, 253, 0.8)',  // Couleur solide pour la médiane cosmic
+                supernovae: 'rgba(255, 235, 59, 0.8)'  // Couleur solide pour la médiane supernovae
+            };
+            
+            const face1Color = borderColors[d.face1State];
+            const face2Color = borderColors[d.face2State];
+            
+            // Médiane = couleur de l'état le plus fort (TOUJOURS PRÉSENTE pour les dominos double)
+            const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic', 'supernovae'];
+            const idx1 = STATE_ORDER.indexOf(d.face1State);
+            const idx2 = STATE_ORDER.indexOf(d.face2State);
+            const strongestState = idx1 >= idx2 ? d.face1State : d.face2State;
+            const medianeColor = medianeColors[strongestState];
+            
+            return `<svg viewBox="0 0 90 90">
+                <defs>
+                    <linearGradient id="cosmicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ff006e"/>
+                        <stop offset="25%" style="stop-color:#8338ec"/>
+                        <stop offset="50%" style="stop-color:#06b6d4"/>
+                        <stop offset="75%" style="stop-color:#34d399"/>
+                        <stop offset="100%" style="stop-color:#ffd700"/>
+                    </linearGradient>
+                    <linearGradient id="supernovaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ff4500"/>
+                        <stop offset="25%" style="stop-color:#ff8c00"/>
+                        <stop offset="50%" style="stop-color:#ffd700"/>
+                        <stop offset="75%" style="stop-color:#ffff00"/>
+                        <stop offset="100%" style="stop-color:#ff8c00"/>
+                    </linearGradient>
+                </defs>
+                
+                <!-- Bordure complète face1 (haut) : coin haut-gauche + haut + coin haut-droit + côté droit haut -->
+                <path d="M 1 45 L 1 12 A 11 11 0 0 1 12 1 L 78 1 A 11 11 0 0 1 89 12 L 89 45" 
+                      fill="none" stroke="${face1Color}" stroke-width="2"/>
+                
+                <!-- Médiane (état le plus fort) - TOUJOURS PRÉSENTE -->
+                <line x1="0" y1="45" x2="90" y2="45" stroke="${medianeColor}" stroke-width="2"/>
+                
+                <!-- Bordure complète face2 (bas) : côté droit bas + coin bas-droit + bas + coin bas-gauche + côté gauche bas -->
+                <path d="M 89 45 L 89 78 A 11 11 0 0 1 78 89 L 12 89 A 11 11 0 0 1 1 78 L 1 45" 
+                      fill="none" stroke="${face2Color}" stroke-width="2"/>
+                
+                <!-- Contenu des faces -->
+                <g class="face1-${d.face1State}">${renderIcon(d.face1, false, d.face1State)}</g>
+                <g class="face2-${d.face2State}" transform="translate(0,45)">${renderIcon(d.face2, true, d.face2State)}</g>
+            </svg>`;
+        }
+        
+        
+        function render() {
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < TOTAL; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                
+                const square = document.createElement('div');
+                square.dataset.index = i;
+                
+                if (!dominos[i]) {
+                    square.className = 'square empty';
+                } else if (dominos[i].type === 'whiteBorder') {
+                    square.className = 'square white-border';
+                    square.style.transform = `rotate(${dominos[i].rotation}deg)`;
+                } else {
+                    // Ajouter la classe d'état pour les halos (bordures et box-shadow)
+                    square.className = 'square ' + (dominos[i].state || 'white');
+                    square.innerHTML = renderDomino(dominos[i]);
+                    square.style.transform = `rotate(${dominos[i].rotation}deg)`;
+                }
+                
+                cell.appendChild(square);
+                grid.appendChild(cell);
+            }
+        }
+        
+        // Utilitaires
+        function getPos(i) { return { x: i % COLS, y: Math.floor(i / COLS) }; }
+        function getIndex(x, y) { return (x < 0 || x >= COLS || y < 0 || y >= ROWS) ? -1 : y * COLS + x; }
+        
+        // Obtenir la face exposée dans une direction selon la rotation
+        function getExposedFace(domino, dir) {
+            if (!domino) return null;
+            const r = ((domino.rotation % 360) + 360) % 360;
+            // Avec rotation 90° : face1 → droite, face2 → gauche
+            // Avec rotation 0° : face1 → haut, face2 → bas
+            const map = {
+                0:   { top: 'face1', bottom: 'face2', left: null, right: null },
+                90:  { top: null, bottom: null, left: 'face2', right: 'face1' },
+                180: { top: 'face2', bottom: 'face1', left: null, right: null },
+                270: { top: null, bottom: null, left: 'face1', right: 'face2' }
+            };
+            const face = map[r]?.[dir];
+            return face ? domino[face] : null;
+        }
+        
+        // Obtenir quelle propriété (face1 ou face2) est exposée dans une direction
+        function getExposedFaceKey(domino, dir) {
+            if (!domino) return null;
+            const r = ((domino.rotation % 360) + 360) % 360;
+            const map = {
+                0:   { top: 'face1', bottom: 'face2', left: null, right: null },
+                90:  { top: null, bottom: null, left: 'face2', right: 'face1' },
+                180: { top: 'face2', bottom: 'face1', left: null, right: null },
+                270: { top: null, bottom: null, left: 'face1', right: 'face2' }
+            };
+            return map[r]?.[dir] || null;
+        }
+        
+        // Direction opposée
+        function oppositeDir(dir) {
+            return { top: 'bottom', bottom: 'top', left: 'right', right: 'left' }[dir];
+        }
+        
+        // ============================================
+        // DÉTECTION DES FUSIONS
+        // ============================================
+        
+        function checkFusions() {
+            if (isAnimating || isLocalRotating) return;
+            
+            // PRIORITÉ 1 : Vérifier les fusions de dominos Unique adjacents (horizontal ET vertical)
+            for (let i = 0; i < TOTAL; i++) {
+                if (!dominos[i] || dominos[i].type !== 'unique') continue;
+                const { x, y } = getPos(i);
+                
+                // Vérifier à droite
+                const iR = getIndex(x + 1, y);
+                if (iR !== -1 && dominos[iR] && dominos[iR].type === 'unique') {
+                    // Déterminer qui est le projectile (celui qui a bougé)
+                    const isMoved = lastMovedIndices.includes(i);
+                    const isRMoved = lastMovedIndices.includes(iR);
+                    if (isMoved && !isRMoved) {
+                        performUniqueFusion(iR, i, 'horizontal'); // i va vers iR
+                    } else {
+                        performUniqueFusion(i, iR, 'horizontal'); // iR va vers i (par défaut)
+                    }
+                    return;
+                }
+                
+                // Vérifier à gauche  
+                const iL = getIndex(x - 1, y);
+                if (iL !== -1 && dominos[iL] && dominos[iL].type === 'unique') {
+                    const isMoved = lastMovedIndices.includes(i);
+                    const isLMoved = lastMovedIndices.includes(iL);
+                    if (isLMoved && !isMoved) {
+                        performUniqueFusion(i, iL, 'horizontal'); // iL va vers i
+                    } else {
+                        performUniqueFusion(iL, i, 'horizontal'); // i va vers iL (par défaut)
+                    }
+                    return;
+                }
+                
+                // Vérifier en bas
+                const iB = getIndex(x, y + 1);
+                if (iB !== -1 && dominos[iB] && dominos[iB].type === 'unique') {
+                    const isMoved = lastMovedIndices.includes(i);
+                    const isBMoved = lastMovedIndices.includes(iB);
+                    if (isMoved && !isBMoved) {
+                        performUniqueFusion(iB, i, 'vertical'); // i va vers iB
+                    } else {
+                        performUniqueFusion(i, iB, 'vertical'); // iB va vers i (par défaut)
+                    }
+                    return;
+                }
+                
+                // Vérifier en haut
+                const iT = getIndex(x, y - 1);
+                if (iT !== -1 && dominos[iT] && dominos[iT].type === 'unique') {
+                    const isMoved = lastMovedIndices.includes(i);
+                    const isTMoved = lastMovedIndices.includes(iT);
+                    if (isTMoved && !isMoved) {
+                        performUniqueFusion(i, iT, 'vertical'); // iT va vers i
+                    } else {
+                        performUniqueFusion(iT, i, 'vertical'); // i va vers iT (par défaut)
+                    }
+                    return;
+                }
+            }
+            
+            // PRIORITÉ 2 : Parcourir tous les dominos pour trouver des faces identiques adjacentes
+            for (let i = 0; i < TOTAL; i++) {
+                if (!dominos[i] || dominos[i].type !== 'double') continue;
+                const { x, y } = getPos(i);
+                
+                // Vérifier à droite
+                const iR = getIndex(x + 1, y);
+                if (iR !== -1 && dominos[iR] && dominos[iR].type === 'double') {
+                    const faceLeft = getExposedFace(dominos[i], 'right');
+                    const faceRight = getExposedFace(dominos[iR], 'left');
+                    if (faceLeft && faceRight && faceLeft === faceRight) {
+                        // Déterminer qui est le projectile
+                        const isMoved = lastMovedIndices.includes(i);
+                        const isRMoved = lastMovedIndices.includes(iR);
+                        if (isMoved && !isRMoved) {
+                            performCompressionFusion(iR, i, 'horizontal'); // i va vers iR
+                        } else {
+                            performCompressionFusion(i, iR, 'horizontal'); // iR va vers i (par défaut)
+                        }
+                        return;
+                    }
+                }
+                
+                // Vérifier en bas
+                const iB = getIndex(x, y + 1);
+                if (iB !== -1 && dominos[iB] && dominos[iB].type === 'double') {
+                    const faceTop = getExposedFace(dominos[i], 'bottom');
+                    const faceBottom = getExposedFace(dominos[iB], 'top');
+                    if (faceTop && faceBottom && faceTop === faceBottom) {
+                        // Déterminer qui est le projectile
+                        const isMoved = lastMovedIndices.includes(i);
+                        const isBMoved = lastMovedIndices.includes(iB);
+                        if (isMoved && !isBMoved) {
+                            performCompressionFusion(iB, i, 'vertical'); // i va vers iB
+                        } else {
+                            performCompressionFusion(i, iB, 'vertical'); // iB va vers i (par défaut)
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // ============================================
+        // FUSION DES DOMINOS UNIQUE
+        // ============================================
+        
+        function performUniqueFusion(receiverIdx, projectileIdx, direction) {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            const receiver = dominos[receiverIdx];
+            const projectile = dominos[projectileIdx];
+            
+            // Animer les deux dominos
+            const receiverEl = grid.children[receiverIdx].querySelector('.square');
+            const projectileEl = grid.children[projectileIdx].querySelector('.square');
+            
+            if (receiverEl) receiverEl.classList.add('fusion-animation');
+            if (projectileEl) projectileEl.classList.add('fusion-animation');
+            
+            setTimeout(() => {
+                // Créer un nouveau domino classique avec les deux symboles
+                // PRÉSERVATION DES ÉTATS : chaque face garde son état d'origine
+                const face1State = receiver.face1State;
+                const face2State = projectile.face1State;
+                
+                const newDomino = {
+                    face1: receiver.face1,
+                    face2: projectile.face1,
+                    face1State: face1State,
+                    face2State: face2State,
+                    rotation: direction === 'horizontal' ? 90 : 0,  // 90° si horizontal, 0° si vertical
+                    state: STATE_ORDER[Math.max(STATE_ORDER.indexOf(face1State), STATE_ORDER.indexOf(face2State))],
+                    type: 'double'
+                };
+                
+                // Le receiver (qui n'a pas bougé) garde le nouveau domino fusionné
+                dominos[receiverIdx] = newDomino;
+                
+                // Le projectile (qui a bougé) devient une case blanche avec liseret
+                dominos[projectileIdx] = { 
+                    type: 'whiteBorder',
+                    rotation: 0
+                };
+                
+                render();
+                isAnimating = false;
+                
+                // Réinitialiser lastMovedIndices après fusion
+                lastMovedIndices = [];
+                
+                // Vérifier s'il y a d'autres fusions
+                setTimeout(checkFusions, 50);
+            }, 400);
+        }
+        
+        // ============================================
+        // ANIMATION DE FUSION PAR COMPRESSION
+        // ============================================
+        
+        function performCompressionFusion(receiverIdx, projectileIdx, direction) {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            const receiver = dominos[receiverIdx];
+            const projectile = dominos[projectileIdx];
+            
+            const receiverEl = grid.children[receiverIdx].querySelector('.square');
+            const projectileEl = grid.children[projectileIdx].querySelector('.square');
+            
+            if (!receiverEl || !projectileEl || !receiver || !projectile) {
+                isAnimating = false;
+                return;
+            }
+            
+            const cellSize = grid.children[0].offsetWidth;
+            const gap = parseFloat(getComputedStyle(grid).gap) || 8;
+            
+            // Distance jusqu'à la médiane du receveur
+            const distanceToMedian = gap + (cellSize / 2);
+            
+            // Déterminer la direction du mouvement selon les positions relatives
+            const receiverPos = getPos(receiverIdx);
+            const projectilePos = getPos(projectileIdx);
+            
+            const isHorizontal = (direction === 'horizontal');
+            let translateDirection = 1; // Par défaut : vers la droite/bas (positif)
+            
+            if (isHorizontal) {
+                // Si projectile est à DROITE du receiver → doit aller vers la GAUCHE (négatif)
+                // Si projectile est à GAUCHE du receiver → doit aller vers la DROITE (positif)
+                translateDirection = projectilePos.x > receiverPos.x ? -1 : 1;
+            } else {
+                // Si projectile est EN BAS du receiver → doit aller vers le HAUT (négatif)
+                // Si projectile est EN HAUT du receiver → doit aller vers le BAS (positif)
+                translateDirection = projectilePos.y > receiverPos.y ? -1 : 1;
+            }
+            
+            projectileEl.style.zIndex = '100';
+            
+            const phase1Duration = 350;
+            const phase2Duration = 180;
+            
+            let startTime = null;
+            
+            // Déterminer l'axe de compression selon direction et rotation du projectile
+            const rotation = ((projectile.rotation % 360) + 360) % 360;
+            
+            // Pour compression visuelle dans le sens du mouvement :
+            // - Horizontal + rotation 90° ou 270° → scaleY
+            // - Horizontal + rotation 0° ou 180° → scaleX
+            // - Vertical + rotation 0° ou 180° → scaleY
+            // - Vertical + rotation 90° ou 270° → scaleX
+            const rotatedHorizontally = (rotation === 90 || rotation === 270);
+            const useScaleY = (isHorizontal && rotatedHorizontally) || (!isHorizontal && !rotatedHorizontally);
+            
+            // Direction du translate avec correction de direction
+            const translateProp = isHorizontal ? 'translateX' : 'translateY';
+            const translateValue = distanceToMedian * translateDirection;
+            
+            function animatePhase1(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / phase1Duration, 1);
+                
+                const ease = progress * progress;
+                const translate = translateValue * ease;
+                const scale = 1 - (0.5 * ease);
+                
+                const scaleTransform = useScaleY ? `scaleY(${scale})` : `scaleX(${scale})`;
+                projectileEl.style.transform = `${translateProp}(${translate}px) rotate(${projectile.rotation}deg) ${scaleTransform}`;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animatePhase1);
+                } else {
+                    startTime = null;
+                    requestAnimationFrame(animatePhase2);
+                }
+            }
+            
+            function animatePhase2(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / phase2Duration, 1);
+                
+                const scale = 0.5 * (1 - progress);
+                const opacity = 1 - progress;
+                
+                const scaleTransform = useScaleY ? `scaleY(${Math.max(0.01, scale)})` : `scaleX(${Math.max(0.01, scale)})`;
+                projectileEl.style.transform = `${translateProp}(${translateValue}px) rotate(${projectile.rotation}deg) ${scaleTransform}`;
+                projectileEl.style.opacity = opacity;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animatePhase2);
+                } else {
+                    applyFusionResult();
+                }
+            }
+            
+            function applyFusionResult() {
+                /* RÈGLE DE FUSION ADDITIVE - Somme des états :
+                   
+                   Le nouvel état = somme des états des deux faces qui fusionnent + 1
+                   white(0) + white(0) = silver(1)
+                   white(0) + silver(1) = gold(2)
+                   silver(1) + silver(1) = gold(2)
+                   silver(1) + gold(2) = emerald(3)
+                   gold(2) + gold(2) = cosmic(4)
+                   
+                   Quand deux faces identiques se font face :
+                   - RECEIVER (immobile) : La face avec le sigle identique ABSORBE → état = somme des états
+                   - PROJECTILE (qui bouge) : Perd le sigle identique → devient domino UNIQUE avec l'autre sigle
+                   
+                   Exemple : Receiver (Cercle-gold, Carré-silver) à 90° + Projectile (Carré-white, Triangle-emerald) à 90°
+                   Contact : les deux Carrés se touchent (silver + white)
+                   Résultat : 
+                   - Receiver → (Cercle-gold, Carré-gold) le Carré absorbe (1+0+1=2=gold)
+                   - Projectile → UNIQUE Triangle-emerald
+                */
+                
+                console.log('=== FUSION DEBUG ===');
+                console.log('Receiver:', receiver, 'rotation:', receiver.rotation);
+                console.log('Projectile:', projectile, 'rotation:', projectile.rotation);
+                console.log('Direction:', isHorizontal ? 'HORIZONTAL' : 'VERTICAL');
+                
+                // Déterminer les positions pour savoir d'où vient le projectile
+                const receiverPos = getPos(receiverIdx);
+                const projectilePos = getPos(projectileIdx);
+                
+                // Identifier les faces qui se touchent selon les positions relatives
+                let receiverTouchingKey, projectileTouchingKey, projectileFarKey;
+                
+                if (isHorizontal) {
+                    // Collision HORIZONTALE
+                    const rRot = receiver.rotation % 180;
+                    const pRot = projectile.rotation % 180;
+                    
+                    if (rRot === 0 || pRot === 0) {
+                        console.error('Dominos mal orientés pour collision horizontale');
+                        return;
+                    }
+                    
+                    // Déterminer qui est à gauche et qui est à droite
+                    if (projectilePos.x > receiverPos.x) {
+                        // Projectile est à DROITE du receiver → vient de la droite
+                        receiverTouchingKey = getExposedFaceKey(receiver, 'right');
+                        projectileTouchingKey = getExposedFaceKey(projectile, 'left');
+                        projectileFarKey = getExposedFaceKey(projectile, 'right');
+                    } else {
+                        // Projectile est à GAUCHE du receiver → vient de la gauche
+                        receiverTouchingKey = getExposedFaceKey(receiver, 'left');
+                        projectileTouchingKey = getExposedFaceKey(projectile, 'right');
+                        projectileFarKey = getExposedFaceKey(projectile, 'left');
+                    }
+                    
+                } else {
+                    // Collision VERTICALE
+                    const rRot = receiver.rotation % 180;
+                    const pRot = projectile.rotation % 180;
+                    
+                    if (rRot !== 0 || pRot !== 0) {
+                        console.error('Dominos mal orientés pour collision verticale');
+                        return;
+                    }
+                    
+                    // Déterminer qui est en haut et qui est en bas
+                    if (projectilePos.y > receiverPos.y) {
+                        // Projectile est EN BAS du receiver → vient du bas
+                        receiverTouchingKey = getExposedFaceKey(receiver, 'bottom');
+                        projectileTouchingKey = getExposedFaceKey(projectile, 'top');
+                        projectileFarKey = getExposedFaceKey(projectile, 'bottom');
+                    } else {
+                        // Projectile est EN HAUT du receiver → vient du haut
+                        receiverTouchingKey = getExposedFaceKey(receiver, 'top');
+                        projectileTouchingKey = getExposedFaceKey(projectile, 'bottom');
+                        projectileFarKey = getExposedFaceKey(projectile, 'top');
+                    }
+                }
+                
+                console.log('Receiver touching:', receiverTouchingKey, '=', receiver[receiverTouchingKey]);
+                console.log('Projectile touching:', projectileTouchingKey, '=', projectile[projectileTouchingKey]);
+                console.log('Projectile far:', projectileFarKey, '=', projectile[projectileFarKey]);
+                
+                // Le sigle identique qui se touche
+                const touchingSymbol = receiver[receiverTouchingKey];
+                
+                // Créer le nouveau domino receiver : la face qui a touché ABSORBE et monte en état
+                const newDomino = {
+                    face1: receiver.face1,
+                    face2: receiver.face2,
+                    face1State: receiver.face1State,
+                    face2State: receiver.face2State,
+                    rotation: receiver.rotation,
+                    state: receiver.state,
+                    type: 'double'
+                };
+                
+                // La face du receiver qui a touché ABSORBE avec LOGIQUE ADDITIVE
+                // nouvel état = somme des états des deux faces qui se touchent
+                // white(0) + white(0) = silver(1), white(0) + silver(1) = gold(2), etc.
+                if (receiverTouchingKey && projectileTouchingKey) {
+                    const receiverStateIdx = STATE_ORDER.indexOf(receiver[receiverTouchingKey + 'State']);
+                    const projectileStateIdx = STATE_ORDER.indexOf(projectile[projectileTouchingKey + 'State']);
+                    const sumIdx = Math.min(receiverStateIdx + projectileStateIdx + 1, STATE_ORDER.length - 1);
+                    const newState = STATE_ORDER[sumIdx];
+                    newDomino[receiverTouchingKey + 'State'] = newState;
+                    console.log('Face qui absorbe:', receiverTouchingKey, 'états:', receiverStateIdx, '+', projectileStateIdx, '=', sumIdx, '->', newState);
+                }
+                
+                // Mettre à jour l'état général du receiver
+                const idx1 = STATE_ORDER.indexOf(newDomino.face1State);
+                const idx2 = STATE_ORDER.indexOf(newDomino.face2State);
+                newDomino.state = STATE_ORDER[Math.max(idx1, idx2)];
+                
+                // Créer le domino UNIQUE recyclé : garde seulement le sigle qui n'a PAS touché
+                const recycledDomino = {
+                    face1: projectile[projectileFarKey],
+                    face1State: projectile[projectileFarKey + 'State'],
+                    rotation: 0,
+                    state: projectile[projectileFarKey + 'State'],
+                    type: 'unique'
+                };
+                
+                console.log('Nouveau domino receiver:', newDomino);
+                console.log('Recyclé (domino unique):', recycledDomino);
+                
+                // Appliquer
+                dominos[receiverIdx] = newDomino;
+                dominos[projectileIdx] = recycledDomino;
+                
+                render();
+                lastMovedIndices = [];
+                
+                // Effet de halo
+                const newEl = grid.children[receiverIdx].querySelector('.square');
+                if (newEl) {
+                    const haloDir = isHorizontal ? '6px 0' : '0 6px';
+                    newEl.style.boxShadow = `${haloDir} 20px rgba(34, 211, 238, 0.5), 0 0 10px rgba(34, 211, 238, 0.2)`;
+                    
+                    setTimeout(() => {
+                        newEl.style.transition = 'box-shadow 0.4s ease-out';
+                        newEl.style.boxShadow = '';
+                    }, 150);
+                }
+                
+                setTimeout(() => {
+                    isAnimating = false;
+                    checkFusions();
+                }, 300);
+            }
+            
+            requestAnimationFrame(animatePhase1);
+        }
+        
+        // ============================================
+        // SYSTÈME DE ROTATION 2x2
+        // ============================================
+        
+        function executeRotation(indices, clockwise, cb) {
+            if (isLocalRotating || isAnimating) return;
+            
+            // Sauvegarder l'état avant modification
+            saveState();
+            
+            isLocalRotating = true;
+            
+            const cells = indices.map(idx => ({
+                el: grid.children[idx]?.querySelector('.square'),
+                domino: dominos[idx],
+                sx: idx % COLS,
+                sy: Math.floor(idx / COLS)
+            }));
+            
+            const map = clockwise ? [2, 0, 3, 1] : [1, 3, 0, 2];
+            cells.forEach((c, i) => {
+                c.tx = indices[map[i]] % COLS;
+                c.ty = Math.floor(indices[map[i]] / COLS);
+            });
+            
+            const dur = ROTATION_SPEED * 0.5;
+            const start = performance.now();
+            const cellSize = grid.children[0].offsetWidth;
+            const gap = parseFloat(getComputedStyle(grid).gap) || 8;
+            
+            function animate(t) {
+                const p = Math.min((t - start) / dur, 1);
+                const e = 1 - Math.pow(1 - p, 3);
+                
+                cells.forEach(c => {
+                    if (c.el && c.domino) {
+                        const dx = (c.tx - c.sx) * (cellSize + gap) * e;
+                        const dy = (c.ty - c.sy) * (cellSize + gap) * e;
+                        c.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${c.domino.rotation}deg)`;
+                    }
+                });
+                
+                if (p < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    finishRotation(indices, clockwise, cb);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        function finishRotation(indices, clockwise, cb) {
+            const saved = indices.map(i => dominos[i]);
+            const map = clockwise ? [2, 0, 3, 1] : [1, 3, 0, 2];
+            
+            for (let i = 0; i < 4; i++) {
+                dominos[indices[map[i]]] = saved[i];
+            }
+            
+            // Tracker tous les indices du bloc 2x2 comme ayant bougé
+            lastMovedIndices = [...indices];
+            
+            render();
+            isLocalRotating = false;
+            
+            // Vérifier les fusions après rotation
+            setTimeout(checkFusions, 50);
+            
+            if (cb) cb();
+        }
+        
+        // Rotation individuelle d'un domino
+        function rotateIndividual(idx, clockwise) {
+            const domino = dominos[idx];
+            if (!domino || isLocalRotating || isAnimating) return;
+            
+            // Sauvegarder l'état avant modification
+            saveState();
+            
+            isLocalRotating = true;
+            domino.rotation += clockwise ? 90 : -90;
+            
+            // Tracker l'indice qui a bougé
+            lastMovedIndices = [idx];
+            
+            const el = grid.children[idx].querySelector('.square');
+            if (el) {
+                el.style.transition = 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)';
+                el.style.transform = `rotate(${domino.rotation}deg)`;
+                setTimeout(() => {
+                    isLocalRotating = false;
+                    checkFusions();
+                }, 150);
+            } else {
+                isLocalRotating = false;
+            }
+        }
+        
+        // Rotation individuelle continue (sans bloquer pour gestes multiples)
+        function rotateIndividualContinuous(idx, clockwise) {
+            const domino = dominos[idx];
+            if (!domino || isAnimating) return;
+            
+            // Sauvegarder l'état seulement si première rotation de la séquence
+            if (!dragState.firstRotationSaved) {
+                saveState();
+                dragState.firstRotationSaved = true;
+            }
+            
+            domino.rotation += clockwise ? 90 : -90;
+            
+            // Tracker l'indice qui a bougé
+            lastMovedIndices = [idx];
+            
+            const el = grid.children[idx].querySelector('.square');
+            if (el) {
+                el.style.transition = 'transform 0.1s ease-out';
+                el.style.transform = `rotate(${domino.rotation}deg)`;
+            }
+        }
+        
+        function attemptVerticalRotation(x, y, dy) {
+            let blockCol = Math.min(x, COLS - 2);
+            let blockRow, clockwise;
+            
+            if (dy < 0) {
+                blockRow = Math.max(0, Math.min(y - 1, ROWS - 2));
+                clockwise = false;
+            } else {
+                blockRow = Math.min(y, ROWS - 2);
+                clockwise = true;
+            }
+            
+            const indices = [
+                getIndex(blockCol, blockRow),
+                getIndex(blockCol + 1, blockRow),
+                getIndex(blockCol, blockRow + 1),
+                getIndex(blockCol + 1, blockRow + 1)
+            ];
+            
+            // Vérifier qu'il y a au moins un domino
+            if (indices.some(i => dominos[i])) {
+                executeRotation(indices, clockwise);
+            }
+        }
+        
+        function attemptHorizontalRotation(x, y, dx) {
+            // On ne réagit que sur la rangée du BAS d'un groupe 2x2
+            // Donc y doit être > 0 (pas sur la première rangée)
+            if (y === 0) return;
+            
+            let blockCol, blockRow, clockwise;
+            
+            if (dx > 0) {
+                // Swipe vers la DROITE → rotation ANTIHORAIRE du groupe 2x2 à droite
+                // Le carré swipé fait partie du bas-gauche du groupe
+                blockCol = x;
+                blockRow = y - 1;
+                clockwise = false; // antihoraire
+            } else {
+                // Swipe vers la GAUCHE → rotation HORAIRE du groupe 2x2 à gauche
+                // Le carré swipé fait partie du bas-droit du groupe
+                blockCol = x - 1;
+                blockRow = y - 1;
+                clockwise = true; // horaire
+            }
+            
+            // Vérifier que le groupe est dans la grille
+            if (blockCol < 0 || blockCol > COLS - 2) return;
+            if (blockRow < 0 || blockRow > ROWS - 2) return;
+            
+            const indices = [
+                getIndex(blockCol, blockRow),
+                getIndex(blockCol + 1, blockRow),
+                getIndex(blockCol, blockRow + 1),
+                getIndex(blockCol + 1, blockRow + 1)
+            ];
+            
+            // Vérifier qu'il y a au moins un domino dans le groupe
+            if (indices.some(i => dominos[i])) {
+                executeRotation(indices, clockwise);
+            }
+        }
+        
+        // ============================================
+        // GESTION HISTORIQUE UNDO
+        // ============================================
+        
+        function saveState() {
+            // Sauvegarder une copie profonde de l'état actuel
+            const snapshot = dominos.map(d => {
+                if (!d) return null;
+                return {
+                    face1: d.face1,
+                    face2: d.face2,
+                    face1State: d.face1State,
+                    face2State: d.face2State,
+                    rotation: d.rotation,
+                    state: d.state,
+                    type: d.type
+                };
+            });
+            
+            history.push(snapshot);
+            
+            // Limiter la taille de l'historique
+            if (history.length > MAX_HISTORY) {
+                history.shift();
+            }
+            
+            updateUndoButton();
+        }
+        
+        function undo() {
+            if (history.length === 0 || isAnimating || isLocalRotating) return;
+            
+            // Restaurer l'état précédent
+            const previousState = history.pop();
+            dominos = previousState.map(d => {
+                if (!d) return null;
+                return { ...d };
+            });
+            
+            render();
+            updateUndoButton();
+        }
+        
+        function updateUndoButton() {
+            undoBtn.disabled = history.length === 0;
+        }
+        
+        // ============================================
+        // PERMUTATION DES ÉTATS
+        // ============================================
+        
+        function swapFaceStates(idx) {
+            const domino = dominos[idx];
+            if (!domino || domino.type !== 'double') return;
+            
+            // Sauvegarder l'état avant modification
+            saveState();
+            
+            // Permuter les états entre face1 et face2
+            const temp = domino.face1State;
+            domino.face1State = domino.face2State;
+            domino.face2State = temp;
+            
+            // Réinitialiser lastMovedIndices car la permutation n'est pas un mouvement spatial
+            lastMovedIndices = [];
+            
+            // Rafraîchir l'affichage
+            render();
+            
+            // Vérifier les fusions après permutation
+            setTimeout(checkFusions, 50);
+        }
+        
+        // ============================================
+        // GESTION TACTILE
+        // ============================================
+        
+        function handleStart(e) {
+            if (isLocalRotating || isAnimating) return;
+            
+            const touch = e.touches?.[0] || e;
+            const target = e.target.closest('.square');
+            if (!target || target.classList.contains('empty')) return;
+            
+            const idx = parseInt(target.dataset.index);
+            const pos = getPos(idx);
+            
+            dragState = {
+                idx,
+                x: pos.x,
+                y: pos.y,
+                sx: touch.clientX,
+                sy: touch.clientY,
+                moved: false
+            };
+            
+            e.preventDefault();
+        }
+        
+        function handleMove(e) {
+            if (!dragState || isAnimating) return;
+            
+            const touch = e.touches?.[0] || e;
+            const dx = touch.clientX - dragState.sx;
+            const dy = touch.clientY - dragState.sy;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 30) return;
+            
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            
+            const isHorizontal = absDy < 10 && absDx > 40;
+            const isVertical = !isHorizontal && absDx < 10 && absDy > 40;
+            const isDiagonal = !isHorizontal && !isVertical && absDx > 15 && absDy > 15;
+            
+            if (isHorizontal && !dragState.moved) {
+                dragState.moved = true;
+                attemptHorizontalRotation(dragState.x, dragState.y, dx);
+            } else if (isVertical && !dragState.moved) {
+                dragState.moved = true;
+                attemptVerticalRotation(dragState.x, dragState.y, dy);
+            } else if (isDiagonal) {
+                // Rotation continue : calculer combien de 90° selon la distance
+                const direction = (dy < 0) ? (dx > 0 ? 'ur' : 'ul') : (dx > 0 ? 'dr' : 'dl');
+                const clockwise = (direction === 'ur' || direction === 'dr');
+                
+                // Distance parcourue depuis la dernière rotation
+                const rotationThreshold = 60; // pixels pour un 90°
+                const rotationCount = Math.floor(distance / rotationThreshold);
+                
+                // Si on a accumulé assez de distance pour une nouvelle rotation
+                if (!dragState.lastRotationCount) dragState.lastRotationCount = 0;
+                
+                if (rotationCount > dragState.lastRotationCount) {
+                    dragState.lastRotationCount = rotationCount;
+                    dragState.moved = true;
+                    rotateIndividualContinuous(dragState.idx, clockwise);
+                }
+            }
+            
+            e.preventDefault();
+        }
+        
+        function handleEnd(e) {
+            // Si on n'a pas bougé, c'est un clic simple → permuter les états des faces
+            if (dragState && !dragState.moved) {
+                swapFaceStates(dragState.idx);
+            } else if (dragState && dragState.moved && dragState.lastRotationCount > 0) {
+                // Fin d'une rotation continue → vérifier les fusions
+                setTimeout(() => {
+                    checkFusions();
+                }, 100);
+            }
+            dragState = null;
+        }
+        
+        // Events
+        grid.addEventListener('touchstart', handleStart, { passive: false });
+        grid.addEventListener('touchmove', handleMove, { passive: false });
+        grid.addEventListener('touchend', handleEnd, { passive: false });
+        grid.addEventListener('mousedown', handleStart, { passive: false });
+        grid.addEventListener('mousemove', handleMove, { passive: false });
+        grid.addEventListener('mouseup', handleEnd, { passive: false });
+        
+        // Event listener pour le bouton undo
+        undoBtn.addEventListener('click', undo);
+        
+        // Initialisation
+        initDominos();
+        render();
+        updateUndoButton();  // Initialiser l'état du bouton
+    </script>
+</body>
+</html>
