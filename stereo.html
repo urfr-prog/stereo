@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM - Kaizen 1 v23</title>
+    <title>ADAM - Kaizen 1 v23 (4x5)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
@@ -19,7 +19,7 @@
         .grid {
             display: grid;
             grid-template-columns: repeat(4, var(--cell));
-            grid-template-rows: repeat(4, var(--cell));
+            grid-template-rows: repeat(5, var(--cell));
             gap: var(--gap);
             --cell: min(80px, 20vw);
             --gap: 8px;
@@ -400,8 +400,8 @@
         */
         
         const COLS = 4;
-        const ROWS = 4;
-        const TOTAL = 16;
+        const ROWS = 5;
+        const TOTAL = 20;
         const ROTATION_SPEED = 400;
         const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic', 'supernovae'];
         
@@ -440,23 +440,23 @@
         function initDominos() {
             dominos = [];
             
-            // Nouveau plateau : 4 symboles seulement (threeLines, square, circle, chevron)
-            // 8 fois chacun = 32 symboles pour 16 dominos (2 faces par domino)
+            // Plateau 4x5 : 4 symboles (threeLines, square, circle, chevron)
+            // 10 fois chacun = 40 symboles pour 20 dominos (2 faces par domino)
             const symbols = [
-                'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines',
-                'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square',
-                'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle',
-                'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron'
+                'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines',
+                'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square',
+                'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle',
+                'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron'
             ];
             
             // Mélanger les symboles de manière déterministe
-            const rng = seededRandom(16384);
+            const rng = seededRandom(20480);
             for (let i = symbols.length - 1; i > 0; i--) {
                 const j = Math.floor(rng() * (i + 1));
                 [symbols[i], symbols[j]] = [symbols[j], symbols[i]];
             }
             
-            // Créer les 16 dominos avec les 32 symboles mélangés
+            // Créer les 20 dominos avec les 40 symboles mélangés
             for (let i = 0; i < TOTAL; i++) {
                 const x = i % COLS;
                 const y = Math.floor(i / COLS);
