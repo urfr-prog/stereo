@@ -247,69 +247,32 @@
             animation: supernovaPointPulse 1.2s ease-in-out infinite;
         }
         
-        /* === HALOS PAR ÉTAT (bordures et box-shadow sur .square) === */
+        /* === HALOS PAR ÉTAT (uniquement animations, pas de bordures CSS) === */
+        /* Les bordures sont gérées dans le SVG pour chaque face individuellement */
         
-        /* BLANC - tracés subtils */
-        .square.white { border: 1px solid rgba(180, 180, 190, 0.35); }
+        /* BLANC - pas d'effet spécial */
         .square.white svg .separator { stroke: rgba(180, 180, 190, 0.3); }
         
-        /* ARGENT - cyan subtil avec halo */
-        .square.silver { 
-            border: 1px solid rgba(6, 182, 212, 0.6); 
-            box-shadow: 0 0 12px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(6, 182, 212, 0.05); 
-        }
+        /* ARGENT */
         .square.silver svg .separator { stroke: rgba(34, 211, 238, 0.4); }
         
-        /* OR - halo doré */
-        .square.gold { 
-            border: 1px solid rgba(255, 215, 0, 0.7); 
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 20px rgba(255, 215, 0, 0.05); 
-        }
+        /* OR */
         .square.gold svg .separator { stroke: rgba(255, 215, 0, 0.4); }
         
-        /* ÉMERAUDE - halo vert pulsant */
-        .square.emerald { 
-            border: 1px solid rgba(52, 211, 153, 0.9); 
-            box-shadow: 0 0 25px rgba(5, 150, 105, 0.5), 0 0 40px rgba(52, 211, 153, 0.3), inset 0 0 25px rgba(52, 211, 153, 0.1); 
-            animation: emeraldGlow 2.5s ease-in-out infinite; 
-        }
+        /* ÉMERAUDE - avec animation de pulsation */
         .square.emerald svg .separator { stroke: rgba(52, 211, 153, 0.6); }
-        @keyframes emeraldGlow {
-            0%, 100% { box-shadow: 0 0 25px rgba(5, 150, 105, 0.5), 0 0 40px rgba(52, 211, 153, 0.3), inset 0 0 25px rgba(52, 211, 153, 0.1); }
-            50% { box-shadow: 0 0 35px rgba(5, 150, 105, 0.7), 0 0 55px rgba(52, 211, 153, 0.4), inset 0 0 35px rgba(52, 211, 153, 0.15); }
-        }
         
-        /* COSMIC - bordure arc-en-ciel rotative */
-        .square.cosmic { 
-            border: 2px solid transparent; 
-            background: linear-gradient(#12131a, #12131a) padding-box, conic-gradient(from var(--cosmic-angle, 0deg), #ff006e, #8338ec, #06b6d4, #34d399, #ffd700, #ff006e) border-box; 
-            box-shadow: 0 0 25px rgba(131, 56, 236, 0.4), 0 0 40px rgba(255, 0, 110, 0.2), 0 0 50px rgba(6, 182, 212, 0.2), inset 0 0 30px rgba(131, 56, 236, 0.1); 
-            animation: cosmicRotate 4s linear infinite, cosmicPulse 2s ease-in-out infinite; 
-        }
+        /* COSMIC */
         .square.cosmic svg .separator { stroke: rgba(196, 181, 253, 0.6); }
         @property --cosmic-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         @keyframes cosmicRotate { to { --cosmic-angle: 360deg; } }
-        @keyframes cosmicPulse {
-            0%, 100% { box-shadow: 0 0 25px rgba(131, 56, 236, 0.4), 0 0 40px rgba(255, 0, 110, 0.2), 0 0 50px rgba(6, 182, 212, 0.2), inset 0 0 30px rgba(131, 56, 236, 0.1); }
-            50% { box-shadow: 0 0 35px rgba(131, 56, 236, 0.6), 0 0 55px rgba(255, 0, 110, 0.35), 0 0 70px rgba(6, 182, 212, 0.3), inset 0 0 40px rgba(131, 56, 236, 0.15); }
-        }
         @keyframes cosmicIconShift { 0%, 100% { stroke: #c4b5fd; } 33% { stroke: #22d3ee; } 66% { stroke: #f472b6; } }
         @keyframes cosmicPointPulse { 0%, 100% { fill: #c4b5fd; } 50% { fill: #f472b6; } }
         
-        /* SUPERNOVAE - surface solaire en fusion */
-        .square.supernovae { 
-            border: 3px solid transparent; 
-            background: linear-gradient(#12131a, #12131a) padding-box, conic-gradient(from var(--supernova-angle, 0deg), #ff4500, #ff8c00, #ffd700, #ffff00, #ff8c00, #ff4500) border-box; 
-            box-shadow: 0 0 25px rgba(255, 140, 0, 0.4), 0 0 40px rgba(255, 69, 0, 0.2), 0 0 50px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 140, 0, 0.1); 
-            animation: supernovaRotate 3s linear infinite, supernovaPulse 1.5s ease-in-out infinite; 
-        }
+        /* SUPERNOVAE */
         .square.supernovae svg .separator { stroke: rgba(255, 235, 59, 0.6); }
         @property --supernova-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         @keyframes supernovaRotate { to { --supernova-angle: 360deg; } }
-        @keyframes supernovaPulse {
-            0%, 100% { box-shadow: 0 0 25px rgba(255, 140, 0, 0.4), 0 0 40px rgba(255, 69, 0, 0.2), 0 0 50px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 140, 0, 0.1); }
-            50% { box-shadow: 0 0 35px rgba(255, 140, 0, 0.6), 0 0 55px rgba(255, 69, 0, 0.35), 0 0 70px rgba(255, 215, 0, 0.3), inset 0 0 40px rgba(255, 140, 0, 0.15); }
-        }
         @keyframes supernovaIconShift { 
             0%, 100% { stroke: #ffeb3b; } 
             25% { stroke: #ff8c00; } 
@@ -1164,6 +1127,7 @@
                 c.ty = Math.floor(indices[map[i]] / COLS);
             });
             
+            // Paramètres smooth comme test_layer
             const dur = ROTATION_SPEED * 0.5;
             const start = performance.now();
             const cellSize = grid.children[0].offsetWidth;
@@ -1171,13 +1135,14 @@
             
             function animate(t) {
                 const p = Math.min((t - start) / dur, 1);
+                // Easing cubic out comme test_layer
                 const e = 1 - Math.pow(1 - p, 3);
                 
                 cells.forEach(c => {
-                    if (c.el && c.domino) {
+                    if (c.el) {
                         const dx = (c.tx - c.sx) * (cellSize + gap) * e;
                         const dy = (c.ty - c.sy) * (cellSize + gap) * e;
-                        c.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${c.domino.rotation}deg)`;
+                        c.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${c.domino?.rotation || 0}deg)`;
                     }
                 });
                 
@@ -1227,12 +1192,12 @@
             
             const el = grid.children[idx].querySelector('.square');
             if (el) {
-                el.style.transition = 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)';
+                el.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
                 el.style.transform = `rotate(${domino.rotation}deg)`;
                 setTimeout(() => {
                     isLocalRotating = false;
                     checkFusions();
-                }, 150);
+                }, 250);
             } else {
                 isLocalRotating = false;
             }
