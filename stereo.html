@@ -3,56 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM - Kaizen 1 v23 (4x5)</title>
+    <title>ADAM - Kaizen 1 v9</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
         body {
             background-color: #12131a;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 20px;
         }
         
         .grid {
             display: grid;
             grid-template-columns: repeat(4, var(--cell));
-            grid-template-rows: repeat(5, var(--cell));
+            grid-template-rows: repeat(4, var(--cell));
             gap: var(--gap);
             --cell: min(80px, 20vw);
             --gap: 8px;
-        }
-        
-        .undo-button {
-            background: rgba(34, 211, 238, 0.15);
-            border: 2px solid rgba(34, 211, 238, 0.4);
-            border-radius: 12px;
-            color: #22d3ee;
-            font-size: 16px;
-            font-weight: 600;
-            padding: 12px 32px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .undo-button:hover {
-            background: rgba(34, 211, 238, 0.25);
-            border-color: rgba(34, 211, 238, 0.6);
-            transform: scale(1.05);
-        }
-        
-        .undo-button:active {
-            transform: scale(0.95);
-        }
-        
-        .undo-button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-            transform: scale(1);
         }
         
         .cell {
@@ -77,23 +45,6 @@
             cursor: default;
             border: 2px dashed rgba(180, 180, 190, 0.15);
             border-radius: 12px;
-        }
-        
-        /* Case blanche avec liseret pour remplacer les dominos fusionnés */
-        .square.white-border {
-            cursor: pointer;
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            border-radius: 12px;
-            background-color: transparent;
-        }
-        
-        @keyframes fusionPulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-        }
-        
-        .fusion-animation {
-            animation: fusionPulse 0.4s ease-in-out;
         }
         
         .square svg {
@@ -222,198 +173,23 @@
             fill: #c4b5fd;
             filter: drop-shadow(0 0 8px rgba(131, 56, 236, 0.9));
         }
-        
-        /* Face supernovae */
-        .face1-supernovae line.icon, .face1-supernovae path.icon, 
-        .face1-supernovae circle.icon, .face1-supernovae rect.icon {
-            stroke: #ffeb3b;
-            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 140, 0, 0.4));
-            animation: supernovaIconShift 2.5s ease-in-out infinite;
-        }
-        .face1-supernovae circle.point {
-            fill: #ffeb3b;
-            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
-            animation: supernovaPointPulse 1.2s ease-in-out infinite;
-        }
-        .face2-supernovae line.icon, .face2-supernovae path.icon, 
-        .face2-supernovae circle.icon, .face2-supernovae rect.icon {
-            stroke: #ffeb3b;
-            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7)) drop-shadow(0 0 10px rgba(255, 140, 0, 0.4));
-            animation: supernovaIconShift 2.5s ease-in-out infinite;
-        }
-        .face2-supernovae circle.point {
-            fill: #ffeb3b;
-            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
-            animation: supernovaPointPulse 1.2s ease-in-out infinite;
-        }
-        
-        /* === HALOS PAR ÉTAT (uniquement animations, pas de bordures CSS) === */
-        /* Les bordures sont gérées dans le SVG pour chaque face individuellement */
-        
-        /* BLANC - pas d'effet spécial */
-        .square.white svg .separator { stroke: rgba(180, 180, 190, 0.3); }
-        
-        /* ARGENT */
-        .square.silver svg .separator { stroke: rgba(34, 211, 238, 0.4); }
-        
-        /* OR */
-        .square.gold svg .separator { stroke: rgba(255, 215, 0, 0.4); }
-        
-        /* ÉMERAUDE - avec animation de pulsation */
-        .square.emerald svg .separator { stroke: rgba(52, 211, 153, 0.6); }
-        
-        /* COSMIC */
-        .square.cosmic svg .separator { stroke: rgba(196, 181, 253, 0.6); }
-        @property --cosmic-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        @keyframes cosmicRotate { to { --cosmic-angle: 360deg; } }
-        @keyframes cosmicIconShift { 0%, 100% { stroke: #c4b5fd; } 33% { stroke: #22d3ee; } 66% { stroke: #f472b6; } }
-        @keyframes cosmicPointPulse { 0%, 100% { fill: #c4b5fd; } 50% { fill: #f472b6; } }
-        
-        /* SUPERNOVAE */
-        .square.supernovae svg .separator { stroke: rgba(255, 235, 59, 0.6); }
-        @property --supernova-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        @keyframes supernovaRotate { to { --supernova-angle: 360deg; } }
-        @keyframes supernovaIconShift { 
-            0%, 100% { stroke: #ffeb3b; } 
-            25% { stroke: #ff8c00; } 
-            50% { stroke: #ffd700; } 
-            75% { stroke: #ff6347; } 
-        }
-        @keyframes supernovaPointPulse { 
-            0%, 100% { fill: #ffeb3b; } 
-            33% { fill: #ff8c00; } 
-            66% { fill: #ffd700; } 
-        }
     </style>
 </head>
 <body>
     <div class="grid" id="grid"></div>
-    <button class="undo-button" id="undoBtn">↶ Annuler</button>
 
     <script>
-        // ============================================
-        // ██████╗ ███████╗ ██████╗ ██╗     ███████╗███████╗    ██████╗ ██╗   ██╗         ██╗███████╗██╗   ██╗
-        // ██╔══██╗██╔════╝██╔════╝ ██║     ██╔════╝██╔════╝    ██╔══██╗██║   ██║         ██║██╔════╝██║   ██║
-        // ██████╔╝█████╗  ██║  ███╗██║     ███████╗███████╗    ██║  ██║██║   ██║         ██║█████╗  ██║   ██║
-        // ██╔══██╗██╔══╝  ██║   ██║██║     ╚════██║╚════██║    ██║  ██║██║   ██║    ██   ██║██╔══╝  ██║   ██║
-        // ██║  ██║███████╗╚██████╔╝███████╗███████║███████║    ██████╔╝╚██████╔╝    ╚█████╔╝███████╗╚██████╔╝
-        // ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝    ╚═════╝  ╚═════╝      ╚════╝ ╚══════╝ ╚═════╝ 
-        // ============================================
-        
-        /* 
-        ═══════════════════════════════════════════════════════════════════════════════
-        RÈGLES DU JEU ADAM - DOCUMENTATION COMPLÈTE
-        ═══════════════════════════════════════════════════════════════════════════════
-        
-        1. TYPES DE DOMINOS
-        ───────────────────────────────────────────────────────────────────────────────
-        • DOMINO DOUBLE : 2 faces avec symboles et états individuels (face1State, face2State)
-        • DOMINO UNIQUE : 1 seule face avec symbole et état, bordure complète colorée
-        • CASE BLANCHE : Case vide avec liseret blanc, disponible pour recyclage
-        
-        2. CONTRÔLES & MOUVEMENTS
-        ───────────────────────────────────────────────────────────────────────────────
-        • CLIC SIMPLE sur domino double → Permutation des états entre face1 et face2
-        • SWIPE DIAGONAL → Rotation individuelle du domino (90°)
-        • SWIPE HORIZONTAL → Rotation du bloc 2x2 
-        • SWIPE VERTICAL → Rotation du bloc 2x2
-        
-        3. SYSTÈME DE TRACKING DES MOUVEMENTS
-        ───────────────────────────────────────────────────────────────────────────────
-        • lastMovedIndices[] enregistre quels dominos viennent de bouger
-        • Rotation 2x2 → les 4 indices du bloc sont marqués
-        • Rotation individuelle → seul cet indice est marqué
-        • Permutation d'états → PAS de mouvement (lastMovedIndices reste vide)
-        • Reset après chaque fusion
-        
-        4. FUSION DE DOMINOS DOUBLE (même symbole sur faces adjacentes)
-        ───────────────────────────────────────────────────────────────────────────────
-        PRINCIPE : Le domino IMMOBILE (receiver) ABSORBE l'énergie du domino MOBILE (projectile)
-        
-        RÈGLE FONDAMENTALE : Quand deux faces identiques se font face :
-        
-        • RECEIVER (immobile) :
-            → La face avec le sigle identique ABSORBE → monte d'un état
-            → L'autre face reste inchangée
-        
-        • PROJECTILE (qui bouge) :
-            → Perd le sigle identique (annulé lors de la collision)
-            → Devient un DOMINO UNIQUE avec seulement le sigle restant (+ son état)
-        
-        EXEMPLE CONCRET : 
-        Domino GAUCHE (Carré-white, Triangle-emerald) à 90° → BOUGE vers la droite
-        Domino DROITE (Cercle-gold, Carré-silver) à 90° → IMMOBILE
-        
-        À 90° : face1=gauche, face2=droite
-        GAUCHE : Carré (gauche), Triangle (droite)
-        DROITE : Cercle (gauche), Carré (droite)
-        
-        Contact : les deux Carrés se touchent
-        
-        RÉSULTAT :
-        • Domino DROITE (receiver) : (Cercle-gold, Carré-GOLD) 
-          → Le Carré absorbe et passe de silver à gold
-        • Case GAUCHE (projectile) : Domino unique "Triangle-emerald"
-          → Ne garde que le sigle qui n'a pas touché
-        
-        5. FUSION DE DOMINOS UNIQUE (deux dominos uniques adjacents)
-        ───────────────────────────────────────────────────────────────────────────────
-        PRINCIPE : Le domino STATIQUE reste en place, le MOBILE vient vers lui
-        
-        CAS 1 - États identiques (ex: silver + silver)
-            → Évolution au niveau supérieur (GOLD)
-            → Nouveau domino double avec les 2 symboles, états identiques
-        
-        CAS 2 - États différents (ex: gold + silver)  
-            → PRÉSERVATION des deux états dans le domino fusionné
-            → face1State = état du receiver
-            → face2State = état du projectile
-            → state général = max(face1State, face2State)
-        
-        RÉSULTAT :
-            • Receiver : nouveau domino double avec les 2 symboles
-            • Projectile : devient case blanche
-        
-        6. ÉTATS ET PROGRESSION (LOGIQUE ADDITIVE)
-        ───────────────────────────────────────────────────────────────────────────────
-        Ordre des états : white(0) → silver(1) → gold(2) → emerald(3) → cosmic(4)
-        
-        RÈGLE DE FUSION : nouvel état = somme des états + 1
-        • white(0) + white(0) = silver(1)
-        • white(0) + silver(1) = gold(2)
-        • silver(1) + silver(1) = gold(2)
-        • silver(1) + gold(2) = emerald(3)
-        • gold(2) + gold(2) = cosmic(4)
-        
-        • Chaque face a son propre état (face1State, face2State)
-        • L'état général du domino = max(face1State, face2State)
-        • Les bordures et la médiane reflètent les états individuels
-        • Médiane = couleur de l'état le plus fort
-        
-        7. UNDO
-        ───────────────────────────────────────────────────────────────────────────────
-        • Historique de 20 états maximum
-        • Sauvegarde avant : rotation, permutation d'états
-        • Bouton désactivé si historique vide
-        
-        ═══════════════════════════════════════════════════════════════════════════════
-        */
-        
         const COLS = 4;
-        const ROWS = 5;
-        const TOTAL = 20;
+        const ROWS = 4;
+        const TOTAL = 16;
         const ROTATION_SPEED = 400;
-        const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic', 'supernovae'];
+        const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic'];
         
         let grid = document.getElementById('grid');
-        let undoBtn = document.getElementById('undoBtn');
         let isAnimating = false;
         let isLocalRotating = false;
         let dragState = null;
         let dominos = [];
-        let history = [];  // Historique des états pour undo
-        const MAX_HISTORY = 20;  // Limiter l'historique
-        let lastMovedIndices = [];  // Indices des dominos qui viennent de bouger
         
         // Icônes niveau 1
         const ICONS = {
@@ -438,36 +214,19 @@
         }
         
         function initDominos() {
+            const rng = seededRandom(12345);
             dominos = [];
             
-            // Plateau 4x5 : 4 symboles (threeLines, square, circle, chevron)
-            // 10 fois chacun = 40 symboles pour 20 dominos (2 faces par domino)
-            const symbols = [
-                'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines', 'threeLines',
-                'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square', 'square',
-                'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle',
-                'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron', 'chevron'
-            ];
-            
-            // Mélanger les symboles de manière déterministe
-            const rng = seededRandom(20480);
-            for (let i = symbols.length - 1; i > 0; i--) {
-                const j = Math.floor(rng() * (i + 1));
-                [symbols[i], symbols[j]] = [symbols[j], symbols[i]];
-            }
-            
-            // Créer les 20 dominos avec les 40 symboles mélangés
             for (let i = 0; i < TOTAL; i++) {
                 const x = i % COLS;
                 const y = Math.floor(i / COLS);
                 dominos.push({
-                    face1: symbols[i * 2],
-                    face2: symbols[i * 2 + 1],
-                    face1State: 'white',
-                    face2State: 'white',
+                    face1: iconKeys[Math.floor(rng() * iconKeys.length)],
+                    face2: iconKeys[Math.floor(rng() * iconKeys.length)],
+                    face1State: 'white',  // État individuel face1
+                    face2State: 'white',  // État individuel face2
                     rotation: ((x + y) % 2 === 0) ? 0 : 90,
-                    state: 'white',
-                    type: 'double'
+                    state: 'white'
                 });
             }
         }
@@ -510,75 +269,23 @@
         }
         
         function renderDomino(d) {
-            // Domino Unique : symbole centré horizontalement, pas de médiane
-            if (d.type === 'unique') {
-                const stateColors = {
-                    white: 'rgba(180, 180, 190, 0.35)',
-                    silver: 'rgba(6, 182, 212, 0.6)',
-                    gold: 'rgba(255, 215, 0, 0.7)',
-                    emerald: 'rgba(52, 211, 153, 0.9)',
-                    cosmic: 'url(#cosmicGradient)',
-                    supernovae: 'url(#supernovaGradient)'
-                };
-                
-                const borderColor = stateColors[d.face1State];
-                
-                return `<svg viewBox="0 0 90 90">
-                    <defs>
-                        <linearGradient id="cosmicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ff006e"/>
-                            <stop offset="25%" style="stop-color:#8338ec"/>
-                            <stop offset="50%" style="stop-color:#06b6d4"/>
-                            <stop offset="75%" style="stop-color:#34d399"/>
-                            <stop offset="100%" style="stop-color:#ffd700"/>
-                        </linearGradient>
-                        <linearGradient id="supernovaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ff4500"/>
-                            <stop offset="25%" style="stop-color:#ff8c00"/>
-                            <stop offset="50%" style="stop-color:#ffd700"/>
-                            <stop offset="75%" style="stop-color:#ffff00"/>
-                            <stop offset="100%" style="stop-color:#ff8c00"/>
-                        </linearGradient>
-                    </defs>
-                    
-                    <!-- Bordure complète -->
-                    <rect x="1" y="1" width="88" height="88" rx="11" fill="none" stroke="${borderColor}" stroke-width="2"/>
-                    
-                    <!-- Symbole centré horizontalement -->
-                    <g class="face1-${d.face1State}" transform="translate(0,22.5)">${renderIcon(d.face1, false, d.face1State)}</g>
-                </svg>`;
-            }
-            
-            // Domino classique à deux faces
             // Déterminer les couleurs de bordure selon les états
             const borderColors = {
                 white: 'rgba(180, 180, 190, 0.35)',
                 silver: 'rgba(6, 182, 212, 0.6)',
                 gold: 'rgba(255, 215, 0, 0.7)',
                 emerald: 'rgba(52, 211, 153, 0.9)',
-                cosmic: 'url(#cosmicGradient)',
-                supernovae: 'url(#supernovaGradient)'
-            };
-            
-            // Couleurs pour la médiane (sans url() pour cosmic/supernovae)
-            const medianeColors = {
-                white: 'rgba(180, 180, 190, 0.35)',
-                silver: 'rgba(6, 182, 212, 0.6)',
-                gold: 'rgba(255, 215, 0, 0.7)',
-                emerald: 'rgba(52, 211, 153, 0.9)',
-                cosmic: 'rgba(196, 181, 253, 0.8)',  // Couleur solide pour la médiane cosmic
-                supernovae: 'rgba(255, 235, 59, 0.8)'  // Couleur solide pour la médiane supernovae
+                cosmic: 'url(#cosmicGradient)'
             };
             
             const face1Color = borderColors[d.face1State];
             const face2Color = borderColors[d.face2State];
             
-            // Médiane = couleur de l'état le plus fort (TOUJOURS PRÉSENTE pour les dominos double)
-            const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic', 'supernovae'];
+            // Médiane = couleur de l'état le plus fort
+            const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic'];
             const idx1 = STATE_ORDER.indexOf(d.face1State);
             const idx2 = STATE_ORDER.indexOf(d.face2State);
-            const strongestState = idx1 >= idx2 ? d.face1State : d.face2State;
-            const medianeColor = medianeColors[strongestState];
+            const medianeColor = idx1 >= idx2 ? face1Color : face2Color;
             
             return `<svg viewBox="0 0 90 90">
                 <defs>
@@ -589,20 +296,13 @@
                         <stop offset="75%" style="stop-color:#34d399"/>
                         <stop offset="100%" style="stop-color:#ffd700"/>
                     </linearGradient>
-                    <linearGradient id="supernovaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#ff4500"/>
-                        <stop offset="25%" style="stop-color:#ff8c00"/>
-                        <stop offset="50%" style="stop-color:#ffd700"/>
-                        <stop offset="75%" style="stop-color:#ffff00"/>
-                        <stop offset="100%" style="stop-color:#ff8c00"/>
-                    </linearGradient>
                 </defs>
                 
                 <!-- Bordure complète face1 (haut) : coin haut-gauche + haut + coin haut-droit + côté droit haut -->
                 <path d="M 1 45 L 1 12 A 11 11 0 0 1 12 1 L 78 1 A 11 11 0 0 1 89 12 L 89 45" 
                       fill="none" stroke="${face1Color}" stroke-width="2"/>
                 
-                <!-- Médiane (état le plus fort) - TOUJOURS PRÉSENTE -->
+                <!-- Médiane (état le plus fort) -->
                 <line x1="0" y1="45" x2="90" y2="45" stroke="${medianeColor}" stroke-width="2"/>
                 
                 <!-- Bordure complète face2 (bas) : côté droit bas + coin bas-droit + bas + coin bas-gauche + côté gauche bas -->
@@ -626,16 +326,12 @@
                 const square = document.createElement('div');
                 square.dataset.index = i;
                 
-                if (!dominos[i]) {
-                    square.className = 'square empty';
-                } else if (dominos[i].type === 'whiteBorder') {
-                    square.className = 'square white-border';
-                    square.style.transform = `rotate(${dominos[i].rotation}deg)`;
-                } else {
-                    // Ajouter la classe d'état pour les halos (bordures et box-shadow)
-                    square.className = 'square ' + (dominos[i].state || 'white');
+                if (dominos[i]) {
+                    square.className = 'square';
                     square.innerHTML = renderDomino(dominos[i]);
                     square.style.transform = `rotate(${dominos[i].rotation}deg)`;
+                } else {
+                    square.className = 'square empty';
                 }
                 
                 cell.appendChild(square);
@@ -688,160 +384,33 @@
         function checkFusions() {
             if (isAnimating || isLocalRotating) return;
             
-            // PRIORITÉ 1 : Vérifier les fusions de dominos Unique adjacents (horizontal ET vertical)
+            // Parcourir tous les dominos pour trouver des faces identiques adjacentes
             for (let i = 0; i < TOTAL; i++) {
-                if (!dominos[i] || dominos[i].type !== 'unique') continue;
+                if (!dominos[i]) continue;
                 const { x, y } = getPos(i);
                 
                 // Vérifier à droite
                 const iR = getIndex(x + 1, y);
-                if (iR !== -1 && dominos[iR] && dominos[iR].type === 'unique') {
-                    // Déterminer qui est le projectile (celui qui a bougé)
-                    const isMoved = lastMovedIndices.includes(i);
-                    const isRMoved = lastMovedIndices.includes(iR);
-                    if (isMoved && !isRMoved) {
-                        performUniqueFusion(iR, i, 'horizontal'); // i va vers iR
-                    } else {
-                        performUniqueFusion(i, iR, 'horizontal'); // iR va vers i (par défaut)
-                    }
-                    return;
-                }
-                
-                // Vérifier à gauche  
-                const iL = getIndex(x - 1, y);
-                if (iL !== -1 && dominos[iL] && dominos[iL].type === 'unique') {
-                    const isMoved = lastMovedIndices.includes(i);
-                    const isLMoved = lastMovedIndices.includes(iL);
-                    if (isLMoved && !isMoved) {
-                        performUniqueFusion(i, iL, 'horizontal'); // iL va vers i
-                    } else {
-                        performUniqueFusion(iL, i, 'horizontal'); // i va vers iL (par défaut)
-                    }
-                    return;
-                }
-                
-                // Vérifier en bas
-                const iB = getIndex(x, y + 1);
-                if (iB !== -1 && dominos[iB] && dominos[iB].type === 'unique') {
-                    const isMoved = lastMovedIndices.includes(i);
-                    const isBMoved = lastMovedIndices.includes(iB);
-                    if (isMoved && !isBMoved) {
-                        performUniqueFusion(iB, i, 'vertical'); // i va vers iB
-                    } else {
-                        performUniqueFusion(i, iB, 'vertical'); // iB va vers i (par défaut)
-                    }
-                    return;
-                }
-                
-                // Vérifier en haut
-                const iT = getIndex(x, y - 1);
-                if (iT !== -1 && dominos[iT] && dominos[iT].type === 'unique') {
-                    const isMoved = lastMovedIndices.includes(i);
-                    const isTMoved = lastMovedIndices.includes(iT);
-                    if (isTMoved && !isMoved) {
-                        performUniqueFusion(i, iT, 'vertical'); // iT va vers i
-                    } else {
-                        performUniqueFusion(iT, i, 'vertical'); // i va vers iT (par défaut)
-                    }
-                    return;
-                }
-            }
-            
-            // PRIORITÉ 2 : Parcourir tous les dominos pour trouver des faces identiques adjacentes
-            for (let i = 0; i < TOTAL; i++) {
-                if (!dominos[i] || dominos[i].type !== 'double') continue;
-                const { x, y } = getPos(i);
-                
-                // Vérifier à droite
-                const iR = getIndex(x + 1, y);
-                if (iR !== -1 && dominos[iR] && dominos[iR].type === 'double') {
+                if (iR !== -1 && dominos[iR]) {
                     const faceLeft = getExposedFace(dominos[i], 'right');
                     const faceRight = getExposedFace(dominos[iR], 'left');
                     if (faceLeft && faceRight && faceLeft === faceRight) {
-                        // Déterminer qui est le projectile
-                        const isMoved = lastMovedIndices.includes(i);
-                        const isRMoved = lastMovedIndices.includes(iR);
-                        if (isMoved && !isRMoved) {
-                            performCompressionFusion(iR, i, 'horizontal'); // i va vers iR
-                        } else {
-                            performCompressionFusion(i, iR, 'horizontal'); // iR va vers i (par défaut)
-                        }
+                        performCompressionFusion(i, iR, 'horizontal');
                         return;
                     }
                 }
                 
                 // Vérifier en bas
                 const iB = getIndex(x, y + 1);
-                if (iB !== -1 && dominos[iB] && dominos[iB].type === 'double') {
+                if (iB !== -1 && dominos[iB]) {
                     const faceTop = getExposedFace(dominos[i], 'bottom');
                     const faceBottom = getExposedFace(dominos[iB], 'top');
                     if (faceTop && faceBottom && faceTop === faceBottom) {
-                        // Déterminer qui est le projectile
-                        const isMoved = lastMovedIndices.includes(i);
-                        const isBMoved = lastMovedIndices.includes(iB);
-                        if (isMoved && !isBMoved) {
-                            performCompressionFusion(iB, i, 'vertical'); // i va vers iB
-                        } else {
-                            performCompressionFusion(i, iB, 'vertical'); // iB va vers i (par défaut)
-                        }
+                        performCompressionFusion(i, iB, 'vertical');
                         return;
                     }
                 }
             }
-        }
-        
-        // ============================================
-        // FUSION DES DOMINOS UNIQUE
-        // ============================================
-        
-        function performUniqueFusion(receiverIdx, projectileIdx, direction) {
-            if (isAnimating) return;
-            isAnimating = true;
-            
-            const receiver = dominos[receiverIdx];
-            const projectile = dominos[projectileIdx];
-            
-            // Animer les deux dominos
-            const receiverEl = grid.children[receiverIdx].querySelector('.square');
-            const projectileEl = grid.children[projectileIdx].querySelector('.square');
-            
-            if (receiverEl) receiverEl.classList.add('fusion-animation');
-            if (projectileEl) projectileEl.classList.add('fusion-animation');
-            
-            setTimeout(() => {
-                // Créer un nouveau domino classique avec les deux symboles
-                // PRÉSERVATION DES ÉTATS : chaque face garde son état d'origine
-                const face1State = receiver.face1State;
-                const face2State = projectile.face1State;
-                
-                const newDomino = {
-                    face1: receiver.face1,
-                    face2: projectile.face1,
-                    face1State: face1State,
-                    face2State: face2State,
-                    rotation: direction === 'horizontal' ? 90 : 0,  // 90° si horizontal, 0° si vertical
-                    state: STATE_ORDER[Math.max(STATE_ORDER.indexOf(face1State), STATE_ORDER.indexOf(face2State))],
-                    type: 'double'
-                };
-                
-                // Le receiver (qui n'a pas bougé) garde le nouveau domino fusionné
-                dominos[receiverIdx] = newDomino;
-                
-                // Le projectile (qui a bougé) devient une case blanche avec liseret
-                dominos[projectileIdx] = { 
-                    type: 'whiteBorder',
-                    rotation: 0
-                };
-                
-                render();
-                isAnimating = false;
-                
-                // Réinitialiser lastMovedIndices après fusion
-                lastMovedIndices = [];
-                
-                // Vérifier s'il y a d'autres fusions
-                setTimeout(checkFusions, 50);
-            }, 400);
         }
         
         // ============================================
@@ -869,23 +438,6 @@
             // Distance jusqu'à la médiane du receveur
             const distanceToMedian = gap + (cellSize / 2);
             
-            // Déterminer la direction du mouvement selon les positions relatives
-            const receiverPos = getPos(receiverIdx);
-            const projectilePos = getPos(projectileIdx);
-            
-            const isHorizontal = (direction === 'horizontal');
-            let translateDirection = 1; // Par défaut : vers la droite/bas (positif)
-            
-            if (isHorizontal) {
-                // Si projectile est à DROITE du receiver → doit aller vers la GAUCHE (négatif)
-                // Si projectile est à GAUCHE du receiver → doit aller vers la DROITE (positif)
-                translateDirection = projectilePos.x > receiverPos.x ? -1 : 1;
-            } else {
-                // Si projectile est EN BAS du receiver → doit aller vers le HAUT (négatif)
-                // Si projectile est EN HAUT du receiver → doit aller vers le BAS (positif)
-                translateDirection = projectilePos.y > receiverPos.y ? -1 : 1;
-            }
-            
             projectileEl.style.zIndex = '100';
             
             const phase1Duration = 350;
@@ -895,6 +447,7 @@
             
             // Déterminer l'axe de compression selon direction et rotation du projectile
             const rotation = ((projectile.rotation % 360) + 360) % 360;
+            const isHorizontal = (direction === 'horizontal');
             
             // Pour compression visuelle dans le sens du mouvement :
             // - Horizontal + rotation 90° ou 270° → scaleY
@@ -904,9 +457,9 @@
             const rotatedHorizontally = (rotation === 90 || rotation === 270);
             const useScaleY = (isHorizontal && rotatedHorizontally) || (!isHorizontal && !rotatedHorizontally);
             
-            // Direction du translate avec correction de direction
+            // Direction du translate
             const translateProp = isHorizontal ? 'translateX' : 'translateY';
-            const translateValue = distanceToMedian * translateDirection;
+            const translateValue = isHorizontal ? -distanceToMedian : -distanceToMedian;
             
             function animatePhase1(timestamp) {
                 if (!startTime) startTime = timestamp;
@@ -948,138 +501,88 @@
             }
             
             function applyFusionResult() {
-                /* RÈGLE DE FUSION ADDITIVE - Somme des états :
-                   
-                   Le nouvel état = somme des états des deux faces qui fusionnent + 1
-                   white(0) + white(0) = silver(1)
-                   white(0) + silver(1) = gold(2)
-                   silver(1) + silver(1) = gold(2)
-                   silver(1) + gold(2) = emerald(3)
-                   gold(2) + gold(2) = cosmic(4)
-                   
-                   Quand deux faces identiques se font face :
-                   - RECEIVER (immobile) : La face avec le sigle identique ABSORBE → état = somme des états
-                   - PROJECTILE (qui bouge) : Perd le sigle identique → devient domino UNIQUE avec l'autre sigle
-                   
-                   Exemple : Receiver (Cercle-gold, Carré-silver) à 90° + Projectile (Carré-white, Triangle-emerald) à 90°
-                   Contact : les deux Carrés se touchent (silver + white)
-                   Résultat : 
-                   - Receiver → (Cercle-gold, Carré-gold) le Carré absorbe (1+0+1=2=gold)
-                   - Projectile → UNIQUE Triangle-emerald
-                */
-                
-                console.log('=== FUSION DEBUG ===');
-                console.log('Receiver:', receiver, 'rotation:', receiver.rotation);
-                console.log('Projectile:', projectile, 'rotation:', projectile.rotation);
-                console.log('Direction:', isHorizontal ? 'HORIZONTAL' : 'VERTICAL');
-                
-                // Déterminer les positions pour savoir d'où vient le projectile
-                const receiverPos = getPos(receiverIdx);
-                const projectilePos = getPos(projectileIdx);
-                
-                // Identifier les faces qui se touchent selon les positions relatives
-                let receiverTouchingKey, projectileTouchingKey, projectileFarKey;
-                
-                if (isHorizontal) {
-                    // Collision HORIZONTALE
-                    const rRot = receiver.rotation % 180;
-                    const pRot = projectile.rotation % 180;
-                    
-                    if (rRot === 0 || pRot === 0) {
-                        console.error('Dominos mal orientés pour collision horizontale');
-                        return;
-                    }
-                    
-                    // Déterminer qui est à gauche et qui est à droite
-                    if (projectilePos.x > receiverPos.x) {
-                        // Projectile est à DROITE du receiver → vient de la droite
-                        receiverTouchingKey = getExposedFaceKey(receiver, 'right');
-                        projectileTouchingKey = getExposedFaceKey(projectile, 'left');
-                        projectileFarKey = getExposedFaceKey(projectile, 'right');
-                    } else {
-                        // Projectile est à GAUCHE du receiver → vient de la gauche
-                        receiverTouchingKey = getExposedFaceKey(receiver, 'left');
-                        projectileTouchingKey = getExposedFaceKey(projectile, 'right');
-                        projectileFarKey = getExposedFaceKey(projectile, 'left');
-                    }
-                    
-                } else {
-                    // Collision VERTICALE
-                    const rRot = receiver.rotation % 180;
-                    const pRot = projectile.rotation % 180;
-                    
-                    if (rRot !== 0 || pRot !== 0) {
-                        console.error('Dominos mal orientés pour collision verticale');
-                        return;
-                    }
-                    
-                    // Déterminer qui est en haut et qui est en bas
-                    if (projectilePos.y > receiverPos.y) {
-                        // Projectile est EN BAS du receiver → vient du bas
-                        receiverTouchingKey = getExposedFaceKey(receiver, 'bottom');
-                        projectileTouchingKey = getExposedFaceKey(projectile, 'top');
-                        projectileFarKey = getExposedFaceKey(projectile, 'bottom');
-                    } else {
-                        // Projectile est EN HAUT du receiver → vient du haut
-                        receiverTouchingKey = getExposedFaceKey(receiver, 'top');
-                        projectileTouchingKey = getExposedFaceKey(projectile, 'bottom');
-                        projectileFarKey = getExposedFaceKey(projectile, 'top');
-                    }
-                }
-                
-                console.log('Receiver touching:', receiverTouchingKey, '=', receiver[receiverTouchingKey]);
-                console.log('Projectile touching:', projectileTouchingKey, '=', projectile[projectileTouchingKey]);
-                console.log('Projectile far:', projectileFarKey, '=', projectile[projectileFarKey]);
-                
-                // Le sigle identique qui se touche
-                const touchingSymbol = receiver[receiverTouchingKey];
-                
-                // Créer le nouveau domino receiver : la face qui a touché ABSORBE et monte en état
+                // Créer le nouveau domino avec les états de faces
                 const newDomino = {
                     face1: receiver.face1,
                     face2: receiver.face2,
                     face1State: receiver.face1State,
                     face2State: receiver.face2State,
                     rotation: receiver.rotation,
-                    state: receiver.state,
-                    type: 'double'
+                    state: receiver.state
                 };
                 
-                // La face du receiver qui a touché ABSORBE avec LOGIQUE ADDITIVE
-                // nouvel état = somme des états des deux faces qui se touchent
-                // white(0) + white(0) = silver(1), white(0) + silver(1) = gold(2), etc.
-                if (receiverTouchingKey && projectileTouchingKey) {
-                    const receiverStateIdx = STATE_ORDER.indexOf(receiver[receiverTouchingKey + 'State']);
-                    const projectileStateIdx = STATE_ORDER.indexOf(projectile[projectileTouchingKey + 'State']);
-                    const sumIdx = Math.min(receiverStateIdx + projectileStateIdx + 1, STATE_ORDER.length - 1);
-                    const newState = STATE_ORDER[sumIdx];
-                    newDomino[receiverTouchingKey + 'State'] = newState;
-                    console.log('Face qui absorbe:', receiverTouchingKey, 'états:', receiverStateIdx, '+', projectileStateIdx, '=', sumIdx, '->', newState);
+                // Déterminer quelle face du fond évolue et quelle face est annulée
+                let backFaceKey, frontFaceKey, receiverInternalFaceKey, projectileInternalFaceKey;
+                
+                if (isHorizontal) {
+                    // Projectile arrive de droite → face GAUCHE du receiver (fond) évolue
+                    backFaceKey = getExposedFaceKey(receiver, 'left');
+                    frontFaceKey = getExposedFaceKey(receiver, 'right');
+                    const projectileFrontKey = getExposedFaceKey(projectile, 'right');
+                    receiverInternalFaceKey = getExposedFaceKey(receiver, 'right');
+                    projectileInternalFaceKey = getExposedFaceKey(projectile, 'left');
+                    
+                    // Remplacer la face avant avec celle du projectile
+                    if (frontFaceKey && projectileFrontKey) {
+                        newDomino[frontFaceKey] = projectile[projectileFrontKey];
+                        newDomino[frontFaceKey + 'State'] = projectile[projectileFrontKey + 'State'];
+                    }
+                    
+                    // Faire évoluer la face du FOND
+                    if (backFaceKey) {
+                        const currentState = receiver[backFaceKey + 'State'];
+                        const currentIdx = STATE_ORDER.indexOf(currentState);
+                        const newState = STATE_ORDER[Math.min(currentIdx + 1, STATE_ORDER.length - 1)];
+                        newDomino[backFaceKey + 'State'] = newState;
+                    }
+                    
+                } else {
+                    // Projectile arrive du bas → face HAUT du receiver (fond) évolue
+                    backFaceKey = getExposedFaceKey(receiver, 'top');
+                    frontFaceKey = getExposedFaceKey(receiver, 'bottom');
+                    const projectileFrontKey = getExposedFaceKey(projectile, 'bottom');
+                    receiverInternalFaceKey = getExposedFaceKey(receiver, 'bottom');
+                    projectileInternalFaceKey = getExposedFaceKey(projectile, 'top');
+                    
+                    // Remplacer la face avant avec celle du projectile
+                    if (frontFaceKey && projectileFrontKey) {
+                        newDomino[frontFaceKey] = projectile[projectileFrontKey];
+                        newDomino[frontFaceKey + 'State'] = projectile[projectileFrontKey + 'State'];
+                    }
+                    
+                    // Faire évoluer la face du FOND
+                    if (backFaceKey) {
+                        const currentState = receiver[backFaceKey + 'State'];
+                        const currentIdx = STATE_ORDER.indexOf(currentState);
+                        const newState = STATE_ORDER[Math.min(currentIdx + 1, STATE_ORDER.length - 1)];
+                        newDomino[backFaceKey + 'State'] = newState;
+                    }
                 }
                 
-                // Mettre à jour l'état général du receiver
+                // Mettre à jour l'état général du domino (niveau max des deux faces)
                 const idx1 = STATE_ORDER.indexOf(newDomino.face1State);
                 const idx2 = STATE_ORDER.indexOf(newDomino.face2State);
                 newDomino.state = STATE_ORDER[Math.max(idx1, idx2)];
                 
-                // Créer le domino UNIQUE recyclé : garde seulement le sigle qui n'a PAS touché
-                const recycledDomino = {
-                    face1: projectile[projectileFarKey],
-                    face1State: projectile[projectileFarKey + 'State'],
-                    rotation: 0,
-                    state: projectile[projectileFarKey + 'State'],
-                    type: 'unique'
+                // RECYCLAGE : Créer le domino recraché avec UNE SEULE face annulée
+                // Les 2 faces qui ont disparu sont identiques (condition de fusion)
+                // On recrache seulement UNE de ces faces, l'autre devient 'empty'
+                // avec rotation +90° par rapport au domino résultant
+                // L'état de la face recrachée hérite de l'état des faces annulées
+                const annuledFaceState = receiver[receiverInternalFaceKey + 'State'];
+                const recrachedDomino = {
+                    face1: receiver[receiverInternalFaceKey], // Une des faces annulées
+                    face2: 'empty', // L'autre face devient vide
+                    face1State: annuledFaceState, // Hérite de l'état de la face annulée
+                    face2State: 'white', // La face vide reste white
+                    rotation: (newDomino.rotation + 90) % 360,
+                    state: annuledFaceState // État général = état de la seule face présente
                 };
                 
-                console.log('Nouveau domino receiver:', newDomino);
-                console.log('Recyclé (domino unique):', recycledDomino);
-                
-                // Appliquer
                 dominos[receiverIdx] = newDomino;
-                dominos[projectileIdx] = recycledDomino;
+                dominos[projectileIdx] = recrachedDomino;
                 
                 render();
-                lastMovedIndices = [];
                 
                 // Effet de halo
                 const newEl = grid.children[receiverIdx].querySelector('.square');
@@ -1095,6 +598,7 @@
                 
                 setTimeout(() => {
                     isAnimating = false;
+                    // Vérifier s'il y a d'autres fusions
                     checkFusions();
                 }, 300);
             }
@@ -1108,10 +612,6 @@
         
         function executeRotation(indices, clockwise, cb) {
             if (isLocalRotating || isAnimating) return;
-            
-            // Sauvegarder l'état avant modification
-            saveState();
-            
             isLocalRotating = true;
             
             const cells = indices.map(idx => ({
@@ -1127,7 +627,6 @@
                 c.ty = Math.floor(indices[map[i]] / COLS);
             });
             
-            // Paramètres smooth comme test_layer
             const dur = ROTATION_SPEED * 0.5;
             const start = performance.now();
             const cellSize = grid.children[0].offsetWidth;
@@ -1135,14 +634,13 @@
             
             function animate(t) {
                 const p = Math.min((t - start) / dur, 1);
-                // Easing cubic out comme test_layer
                 const e = 1 - Math.pow(1 - p, 3);
                 
                 cells.forEach(c => {
-                    if (c.el) {
+                    if (c.el && c.domino) {
                         const dx = (c.tx - c.sx) * (cellSize + gap) * e;
                         const dy = (c.ty - c.sy) * (cellSize + gap) * e;
-                        c.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${c.domino?.rotation || 0}deg)`;
+                        c.el.style.transform = `translate(${dx}px, ${dy}px) rotate(${c.domino.rotation}deg)`;
                     }
                 });
                 
@@ -1164,9 +662,6 @@
                 dominos[indices[map[i]]] = saved[i];
             }
             
-            // Tracker tous les indices du bloc 2x2 comme ayant bougé
-            lastMovedIndices = [...indices];
-            
             render();
             isLocalRotating = false;
             
@@ -1181,48 +676,19 @@
             const domino = dominos[idx];
             if (!domino || isLocalRotating || isAnimating) return;
             
-            // Sauvegarder l'état avant modification
-            saveState();
-            
             isLocalRotating = true;
             domino.rotation += clockwise ? 90 : -90;
             
-            // Tracker l'indice qui a bougé
-            lastMovedIndices = [idx];
-            
             const el = grid.children[idx].querySelector('.square');
             if (el) {
-                el.style.transition = 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+                el.style.transition = 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)';
                 el.style.transform = `rotate(${domino.rotation}deg)`;
                 setTimeout(() => {
                     isLocalRotating = false;
                     checkFusions();
-                }, 250);
+                }, 150);
             } else {
                 isLocalRotating = false;
-            }
-        }
-        
-        // Rotation individuelle continue (sans bloquer pour gestes multiples)
-        function rotateIndividualContinuous(idx, clockwise) {
-            const domino = dominos[idx];
-            if (!domino || isAnimating) return;
-            
-            // Sauvegarder l'état seulement si première rotation de la séquence
-            if (!dragState.firstRotationSaved) {
-                saveState();
-                dragState.firstRotationSaved = true;
-            }
-            
-            domino.rotation += clockwise ? 90 : -90;
-            
-            // Tracker l'indice qui a bougé
-            lastMovedIndices = [idx];
-            
-            const el = grid.children[idx].querySelector('.square');
-            if (el) {
-                el.style.transition = 'transform 0.1s ease-out';
-                el.style.transform = `rotate(${domino.rotation}deg)`;
             }
         }
         
@@ -1290,79 +756,6 @@
         }
         
         // ============================================
-        // GESTION HISTORIQUE UNDO
-        // ============================================
-        
-        function saveState() {
-            // Sauvegarder une copie profonde de l'état actuel
-            const snapshot = dominos.map(d => {
-                if (!d) return null;
-                return {
-                    face1: d.face1,
-                    face2: d.face2,
-                    face1State: d.face1State,
-                    face2State: d.face2State,
-                    rotation: d.rotation,
-                    state: d.state,
-                    type: d.type
-                };
-            });
-            
-            history.push(snapshot);
-            
-            // Limiter la taille de l'historique
-            if (history.length > MAX_HISTORY) {
-                history.shift();
-            }
-            
-            updateUndoButton();
-        }
-        
-        function undo() {
-            if (history.length === 0 || isAnimating || isLocalRotating) return;
-            
-            // Restaurer l'état précédent
-            const previousState = history.pop();
-            dominos = previousState.map(d => {
-                if (!d) return null;
-                return { ...d };
-            });
-            
-            render();
-            updateUndoButton();
-        }
-        
-        function updateUndoButton() {
-            undoBtn.disabled = history.length === 0;
-        }
-        
-        // ============================================
-        // PERMUTATION DES ÉTATS
-        // ============================================
-        
-        function swapFaceStates(idx) {
-            const domino = dominos[idx];
-            if (!domino || domino.type !== 'double') return;
-            
-            // Sauvegarder l'état avant modification
-            saveState();
-            
-            // Permuter les états entre face1 et face2
-            const temp = domino.face1State;
-            domino.face1State = domino.face2State;
-            domino.face2State = temp;
-            
-            // Réinitialiser lastMovedIndices car la permutation n'est pas un mouvement spatial
-            lastMovedIndices = [];
-            
-            // Rafraîchir l'affichage
-            render();
-            
-            // Vérifier les fusions après permutation
-            setTimeout(checkFusions, 50);
-        }
-        
-        // ============================================
         // GESTION TACTILE
         // ============================================
         
@@ -1389,7 +782,7 @@
         }
         
         function handleMove(e) {
-            if (!dragState || isAnimating) return;
+            if (!dragState || dragState.moved || isAnimating) return;
             
             const touch = e.touches?.[0] || e;
             const dx = touch.clientX - dragState.sx;
@@ -1405,44 +798,23 @@
             const isVertical = !isHorizontal && absDx < 10 && absDy > 40;
             const isDiagonal = !isHorizontal && !isVertical && absDx > 15 && absDy > 15;
             
-            if (isHorizontal && !dragState.moved) {
+            if (isHorizontal) {
                 dragState.moved = true;
                 attemptHorizontalRotation(dragState.x, dragState.y, dx);
-            } else if (isVertical && !dragState.moved) {
+            } else if (isVertical) {
                 dragState.moved = true;
                 attemptVerticalRotation(dragState.x, dragState.y, dy);
             } else if (isDiagonal) {
-                // Rotation continue : calculer combien de 90° selon la distance
                 const direction = (dy < 0) ? (dx > 0 ? 'ur' : 'ul') : (dx > 0 ? 'dr' : 'dl');
                 const clockwise = (direction === 'ur' || direction === 'dr');
-                
-                // Distance parcourue depuis la dernière rotation
-                const rotationThreshold = 60; // pixels pour un 90°
-                const rotationCount = Math.floor(distance / rotationThreshold);
-                
-                // Si on a accumulé assez de distance pour une nouvelle rotation
-                if (!dragState.lastRotationCount) dragState.lastRotationCount = 0;
-                
-                if (rotationCount > dragState.lastRotationCount) {
-                    dragState.lastRotationCount = rotationCount;
-                    dragState.moved = true;
-                    rotateIndividualContinuous(dragState.idx, clockwise);
-                }
+                dragState.moved = true;
+                rotateIndividual(dragState.idx, clockwise);
             }
             
             e.preventDefault();
         }
         
         function handleEnd(e) {
-            // Si on n'a pas bougé, c'est un clic simple → permuter les états des faces
-            if (dragState && !dragState.moved) {
-                swapFaceStates(dragState.idx);
-            } else if (dragState && dragState.moved && dragState.lastRotationCount > 0) {
-                // Fin d'une rotation continue → vérifier les fusions
-                setTimeout(() => {
-                    checkFusions();
-                }, 100);
-            }
             dragState = null;
         }
         
@@ -1454,13 +826,9 @@
         grid.addEventListener('mousemove', handleMove, { passive: false });
         grid.addEventListener('mouseup', handleEnd, { passive: false });
         
-        // Event listener pour le bouton undo
-        undoBtn.addEventListener('click', undo);
-        
         // Initialisation
         initDominos();
         render();
-        updateUndoButton();  // Initialiser l'état du bouton
     </script>
 </body>
 </html>
