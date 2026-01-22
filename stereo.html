@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM v4 - Gravité & Fusions</title>
+    <title>ADAM v4 - 12 Étages (Expérimental)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
@@ -171,6 +171,20 @@
             border-color: rgba(131, 56, 236, 0.6);
         }
         
+        /* === HALOS EXTERNES (domino complet de même état) === */
+        .face.halo-silver {
+            box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.15), 0 0 12px rgba(6, 182, 212, 0.3);
+        }
+        .face.halo-gold {
+            box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.15), 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+        .face.halo-emerald {
+            box-shadow: inset 0 0 25px rgba(52, 211, 153, 0.2), 0 0 25px rgba(5, 150, 105, 0.5), 0 0 40px rgba(52, 211, 153, 0.3);
+        }
+        .face.halo-cosmic {
+            box-shadow: inset 0 0 25px rgba(131, 56, 236, 0.2), 0 0 25px rgba(131, 56, 236, 0.4), 0 0 40px rgba(255, 0, 110, 0.2), 0 0 50px rgba(6, 182, 212, 0.2);
+        }
+        
         /* === ANIMATION FUSION === */
         @keyframes fusionTilt {
             0% { transform: perspective(200px) rotateY(0deg); }
@@ -208,7 +222,7 @@
     </style>
 </head>
 <body>
-    <div class="debug" id="debug">ADAM V4</div>
+    <div class="debug" id="debug">ADAM V4 - 12 Étages</div>
     <div class="grid-wrapper" id="wrapper">
         <div class="grid-container" id="grid"></div>
     </div>
@@ -383,14 +397,27 @@
         }
         
         // Obtenir tous les slots d'une ligne
-        function getRowSlots(row) {
+        // filter: null = tous, 'top' = seulement top, 'bottom' = seulement bottom
+        function getRowSlots(row, filter = null) {
             const slots = [];
             for (let col = 0; col < COLS; col++) {
                 const cell = row * COLS + col;
-                slots.push(cell * 2);     // top
-                slots.push(cell * 2 + 1); // bottom
+                if (filter === null || filter === 'top') {
+                    slots.push(cell * 2);     // top
+                }
+                if (filter === null || filter === 'bottom') {
+                    slots.push(cell * 2 + 1); // bottom
+                }
             }
             return slots;
+        }
+        
+        // Obtenir les slots d'un étage (0-11)
+        // Étage 0 = tops de row 0, Étage 1 = bottoms de row 0, etc.
+        function getEtageSlots(etage) {
+            const row = Math.floor(etage / 2);
+            const isBottom = etage % 2 === 1;
+            return getRowSlots(row, isBottom ? 'bottom' : 'top');
         }
         
         // ============================================
@@ -426,6 +453,7 @@
                 grid.appendChild(el);
                 faceElements.push(el);
             }
+            updateHalos();
         }
         
         function updateFaceVisual(faceIndex) {
@@ -462,6 +490,46 @@
             for (let i = 0; i < TOTAL_FACES; i++) {
                 updateFacePosition(i, animate);
                 updateFaceVisual(i);
+            }
+            updateHalos();
+        }
+        
+        // ============================================
+        // HALOS EXTERNES (domino complet de même état)
+        // ============================================
+        
+        function updateHalos() {
+            // Pour chaque cellule (domino), vérifier si les 2 faces ont le même état
+            for (let cell = 0; cell < TOTAL_CELLS; cell++) {
+                const topSlot = cell * 2;
+                const bottomSlot = cell * 2 + 1;
+                
+                const topFaceIdx = getFaceIndexBySlot(topSlot);
+                const bottomFaceIdx = getFaceIndexBySlot(bottomSlot);
+                
+                if (topFaceIdx < 0 || bottomFaceIdx < 0) continue;
+                
+                const topFace = faces[topFaceIdx];
+                const bottomFace = faces[bottomFaceIdx];
+                const topEl = faceElements[topFaceIdx];
+                const bottomEl = faceElements[bottomFaceIdx];
+                
+                if (!topEl || !bottomEl) continue;
+                
+                // Enlever tous les halos existants
+                topEl.classList.remove('halo-silver', 'halo-gold', 'halo-emerald', 'halo-cosmic');
+                bottomEl.classList.remove('halo-silver', 'halo-gold', 'halo-emerald', 'halo-cosmic');
+                
+                // Si les 2 faces ont le même état (et pas white/empty)
+                if (topFace.state === bottomFace.state && 
+                    topFace.state !== 'white' && 
+                    topFace.icon !== null && 
+                    bottomFace.icon !== null) {
+                    
+                    const haloClass = 'halo-' + topFace.state;
+                    topEl.classList.add(haloClass);
+                    bottomEl.classList.add(haloClass);
+                }
             }
         }
         
@@ -612,6 +680,7 @@
                 // Mettre à jour les visuels
                 updateFaceVisual(percuteurIdx);
                 updateFaceVisual(receveurIdx);
+                updateHalos();
                 
                 // Nettoyer les animations
                 percuteurEl.classList.remove('fusion-tilt');
@@ -717,6 +786,34 @@
             }
         }
         
+        function createGhostsForEtage(etage) {
+            clearGhosts();
+            
+            const slots = getEtageSlots(etage);
+            
+            for (const slot of slots) {
+                const faceIndex = getFaceIndexBySlot(slot);
+                if (faceIndex < 0) continue;
+                
+                const face = faces[faceIndex];
+                const pos = getSlotPosition(slot);
+                
+                // Ghost à gauche
+                const ghostLeft = createFaceElement(face, faceIndex);
+                ghostLeft.classList.add('ghost');
+                ghostLeft.style.left = (pos.x - GRID_WIDTH) + 'px';
+                grid.appendChild(ghostLeft);
+                ghostElements.push({ el: ghostLeft, baseX: pos.x - GRID_WIDTH, slot });
+                
+                // Ghost à droite
+                const ghostRight = createFaceElement(face, faceIndex);
+                ghostRight.classList.add('ghost');
+                ghostRight.style.left = (pos.x + GRID_WIDTH) + 'px';
+                grid.appendChild(ghostRight);
+                ghostElements.push({ el: ghostRight, baseX: pos.x + GRID_WIDTH, slot });
+            }
+        }
+        
         function clearGhosts() {
             ghostElements.forEach(g => g.el.remove());
             ghostElements = [];
@@ -730,6 +827,7 @@
         let dragAxis = null;
         let dragCol = -1;
         let dragRow = -1;
+        let dragEtage = -1;  // 0-11 pour les 12 étages horizontaux
         let dragStartX = 0;
         let dragStartY = 0;
         let dragOffset = 0;
@@ -842,16 +940,17 @@
         }
         
         // ============================================
-        // DRAG HORIZONTAL (ligne, wrap-around, pas de gravité)
+        // DRAG HORIZONTAL (étage = 4 faces, wrap-around, pas de gravité)
         // ============================================
         
-        function startHorizontalDrag(row) {
+        function startHorizontalDrag(etage) {
             if (isAnimating) return;
             
             dragAxis = 'horizontal';
-            dragRow = row;
+            dragEtage = etage;
+            dragRow = Math.floor(etage / 2);  // Garder pour référence
             
-            const slots = getRowSlots(row);
+            const slots = getEtageSlots(etage);
             draggedFaceIndices = [];
             initialPositions = [];
             
@@ -869,14 +968,15 @@
                 });
             }
             
-            createGhostsForRow(row);
+            createGhostsForEtage(etage);
         }
         
-        function applyHorizontalSlide(row, steps) {
+        function applyHorizontalSlide(etage, steps) {
             steps = ((steps % COLS) + COLS) % COLS;
             if (steps === 0) return;
             
-            const slots = getRowSlots(row);
+            const slots = getEtageSlots(etage);
+            const row = Math.floor(etage / 2);
             const moves = [];
             
             for (const slot of slots) {
@@ -925,14 +1025,14 @@
                 el.style.left = targetX + 'px';
             }
             
-            applyHorizontalSlide(dragRow, steps);
+            applyHorizontalSlide(dragEtage, steps);
             
             setTimeout(() => {
                 clearGhosts();
                 updateAllPositions(false);
                 
                 if (steps !== 0) {
-                    log(`Drag horizontal row ${dragRow}, ${steps} steps`);
+                    log(`Drag horizontal étage ${dragEtage}, ${steps} steps`);
                     // PAS de gravité pour horizontal, juste check fusions
                     checkFusions();
                 } else {
@@ -997,6 +1097,7 @@
             dragAxis = null;
             dragCol = -1;
             dragRow = -1;
+            dragEtage = -1;
             initialPositions = [];
             draggedFaceIndices = [];
         }
@@ -1032,6 +1133,8 @@
                 const pos = getSlotPosition(face.slot);
                 dragRow = pos.row;
                 dragCol = pos.col;
+                // Calculer l'étage : row * 2 + (0 si top, 1 si bottom)
+                dragEtage = pos.row * 2 + (pos.isBottom ? 1 : 0);
                 
                 isDragging = true;
                 dragAxis = null;
@@ -1054,7 +1157,7 @@
                 const threshold = 8;
                 if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
                     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        startHorizontalDrag(dragRow);
+                        startHorizontalDrag(dragEtage);
                     } else {
                         startVerticalDrag(dragCol);
                     }
@@ -1095,7 +1198,7 @@
             updateDimensions();
             initFaces();
             initialRender();
-            log('ADAM V4 prêt');
+            log('ADAM V4 - 12 Étages prêt');
             
             // Vérifier les fusions au démarrage
             setTimeout(checkFusions, 100);
