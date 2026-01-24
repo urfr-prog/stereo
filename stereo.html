@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM v4 - 12 Étages (Expérimental)</title>
+    <title>ADAM v4 - Rotation Domino</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
@@ -35,24 +35,34 @@
             height: 100%;
         }
         
-        /* Une face = demi-domino */
-        .face {
+        /* Conteneur domino (2 faces) - c'est lui qui tourne */
+        .domino {
             position: absolute;
-            background-color: #12131a;
-            border: 1px solid rgba(180, 180, 190, 0.35);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: var(--cell);
+            height: var(--cell);
             cursor: pointer;
             user-select: none;
             touch-action: none;
             z-index: 1;
         }
         
-        .face.ghost {
+        .domino.ghost {
             opacity: 0.9;
             pointer-events: none;
             z-index: 0;
+        }
+        
+        /* Une face = demi-domino */
+        .face {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background-color: #12131a;
+            border: 1px solid rgba(180, 180, 190, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .face.empty {
@@ -61,14 +71,15 @@
         
         /* Bords arrondis selon position */
         .face.top {
+            top: 0;
             border-radius: 14px 14px 0 0;
             border-bottom: 1px solid rgba(180, 180, 190, 0.35);
         }
         
         .face.bottom {
+            bottom: 0;
             border-radius: 0 0 14px 14px;
             border-top: 1px solid rgba(180, 180, 190, 0.35);
-            margin-top: -1px;
         }
         
         /* Icônes SVG dans les faces */
@@ -171,20 +182,6 @@
             border-color: rgba(131, 56, 236, 0.6);
         }
         
-        /* === HALOS EXTERNES (domino complet de même état) === */
-        .face.halo-silver {
-            box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.15), 0 0 12px rgba(6, 182, 212, 0.3);
-        }
-        .face.halo-gold {
-            box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.15), 0 0 20px rgba(255, 215, 0, 0.4);
-        }
-        .face.halo-emerald {
-            box-shadow: inset 0 0 25px rgba(52, 211, 153, 0.2), 0 0 25px rgba(5, 150, 105, 0.5), 0 0 40px rgba(52, 211, 153, 0.3);
-        }
-        .face.halo-cosmic {
-            box-shadow: inset 0 0 25px rgba(131, 56, 236, 0.2), 0 0 25px rgba(131, 56, 236, 0.4), 0 0 40px rgba(255, 0, 110, 0.2), 0 0 50px rgba(6, 182, 212, 0.2);
-        }
-        
         /* === ANIMATION FUSION === */
         @keyframes fusionTilt {
             0% { transform: perspective(200px) rotateY(0deg); }
@@ -198,11 +195,11 @@
             100% { transform: scale(1); }
         }
         
-        .fusion-tilt {
+        .fusion-tilt .face {
             animation: fusionTilt 0.4s ease-out forwards;
         }
         
-        .fusion-receive {
+        .fusion-receive .face {
             animation: fusionReceive 0.4s ease-out;
         }
 
@@ -222,7 +219,7 @@
     </style>
 </head>
 <body>
-    <div class="debug" id="debug">ADAM V4 - 12 Étages</div>
+    <div class="debug" id="debug">ADAM V4</div>
     <div class="grid-wrapper" id="wrapper">
         <div class="grid-container" id="grid"></div>
     </div>
@@ -234,7 +231,6 @@
         const COLS = 4;
         const ROWS = 6;
         const TOTAL_CELLS = COLS * ROWS; // 24
-        const TOTAL_FACES = TOTAL_CELLS * 2; // 48
         
         const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic'];
         
@@ -336,289 +332,263 @@
         }
         
         // ============================================
-        // DONNÉES : 48 faces (toujours présentes, jamais supprimées)
+        // DONNÉES : 24 dominos (chacun a 2 faces, rotation, position)
         // ============================================
-        let faces = [];
-        let faceElements = [];
+        let dominos = [];
+        let dominoElements = [];
         let ghostElements = [];
         
-        function initFaces() {
-            faces = [];
+        function initDominos() {
+            dominos = [];
             const rng = seededRandom(LEVEL_SEED);
             
             for (let cell = 0; cell < TOTAL_CELLS; cell++) {
-                const icon1 = LEVEL1_ICONS[Math.floor(rng() * LEVEL1_ICONS.length)];
-                const icon2 = LEVEL1_ICONS[Math.floor(rng() * LEVEL1_ICONS.length)];
+                const col = cell % COLS;
+                const row = Math.floor(cell / COLS);
                 
-                // Face TOP (slot pair)
-                faces.push({
-                    icon: icon1,
-                    state: 'white',
-                    slot: cell * 2
-                });
-                // Face BOTTOM (slot impair)
-                faces.push({
-                    icon: icon2,
-                    state: 'white',
-                    slot: cell * 2 + 1
+                dominos.push({
+                    // Face du haut (dans le référentiel du domino)
+                    topIcon: LEVEL1_ICONS[Math.floor(rng() * LEVEL1_ICONS.length)],
+                    topState: 'white',
+                    // Face du bas (dans le référentiel du domino)
+                    bottomIcon: LEVEL1_ICONS[Math.floor(rng() * LEVEL1_ICONS.length)],
+                    bottomState: 'white',
+                    // Rotation cumulée (peut dépasser 360° ou être négative)
+                    rotation: 0,
+                    // Position dans la grille
+                    cellIndex: cell
                 });
             }
         }
         
         // ============================================
-        // HELPERS SLOT <-> POSITION
+        // HELPERS POSITION
         // ============================================
         
-        // Convertir slot en position visuelle
-        function getSlotPosition(slot) {
-            const cellIndex = Math.floor(slot / 2);
-            const isBottom = slot % 2 === 1;
+        function getCellPosition(cellIndex) {
             const col = cellIndex % COLS;
             const row = Math.floor(cellIndex / COLS);
             const x = col * CELL_TOTAL;
-            const y = row * CELL_TOTAL + (isBottom ? HALF_SIZE : 0);
-            return { x, y, col, row, isBottom, cellIndex };
+            const y = row * CELL_TOTAL;
+            return { x, y, col, row };
         }
         
-        // Trouver l'index de la face occupant un slot
-        function getFaceIndexBySlot(slot) {
-            return faces.findIndex(f => f.slot === slot);
+        function getDominoByCell(cellIndex) {
+            return dominos.find(d => d.cellIndex === cellIndex);
         }
         
-        // Obtenir tous les slots d'une colonne (de haut en bas)
-        function getColumnSlots(col) {
-            const slots = [];
-            for (let row = 0; row < ROWS; row++) {
-                const cell = row * COLS + col;
-                slots.push(cell * 2);     // top
-                slots.push(cell * 2 + 1); // bottom
-            }
-            return slots;
-        }
-        
-        // Obtenir tous les slots d'une ligne
-        // filter: null = tous, 'top' = seulement top, 'bottom' = seulement bottom
-        function getRowSlots(row, filter = null) {
-            const slots = [];
-            for (let col = 0; col < COLS; col++) {
-                const cell = row * COLS + col;
-                if (filter === null || filter === 'top') {
-                    slots.push(cell * 2);     // top
-                }
-                if (filter === null || filter === 'bottom') {
-                    slots.push(cell * 2 + 1); // bottom
-                }
-            }
-            return slots;
-        }
-        
-        // Obtenir les slots d'un étage (0-11)
-        // Étage 0 = tops de row 0, Étage 1 = bottoms de row 0, etc.
-        function getEtageSlots(etage) {
-            const row = Math.floor(etage / 2);
-            const isBottom = etage % 2 === 1;
-            return getRowSlots(row, isBottom ? 'bottom' : 'top');
+        function getDominoIndexByCell(cellIndex) {
+            return dominos.findIndex(d => d.cellIndex === cellIndex);
         }
         
         // ============================================
         // CRÉATION ET MISE À JOUR VISUELLE
         // ============================================
         
-        function createFaceElement(face, index) {
+        function createDominoElement(domino, index) {
             const el = document.createElement('div');
-            const pos = getSlotPosition(face.slot);
-            
-            const emptyClass = face.icon ? '' : 'empty';
-            el.className = `face ${pos.isBottom ? 'bottom' : 'top'} ${face.state} ${emptyClass}`.trim();
+            el.className = 'domino';
             el.dataset.index = index;
             
-            const useF2 = pos.isBottom;
-            const svgContent = renderIcon(face.icon, useF2, face.state);
-            el.innerHTML = `<svg viewBox="0 0 90 45">${svgContent}</svg>`;
-            
+            const pos = getCellPosition(domino.cellIndex);
             el.style.width = CELL_SIZE + 'px';
-            el.style.height = HALF_SIZE + 'px';
+            el.style.height = CELL_SIZE + 'px';
             el.style.left = pos.x + 'px';
             el.style.top = pos.y + 'px';
+            el.style.transform = `rotate(${domino.rotation}deg)`;
+            
+            // Face du haut
+            const topFace = document.createElement('div');
+            const topEmpty = !domino.topIcon;
+            topFace.className = `face top ${domino.topState}${topEmpty ? ' empty' : ''}`;
+            topFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.topIcon, false, domino.topState)}</svg>`;
+            el.appendChild(topFace);
+            
+            // Face du bas
+            const bottomFace = document.createElement('div');
+            const bottomEmpty = !domino.bottomIcon;
+            bottomFace.className = `face bottom ${domino.bottomState}${bottomEmpty ? ' empty' : ''}`;
+            bottomFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.bottomIcon, true, domino.bottomState)}</svg>`;
+            el.appendChild(bottomFace);
             
             return el;
         }
         
         function initialRender() {
             grid.innerHTML = '';
-            faceElements = [];
+            dominoElements = [];
             
-            for (let i = 0; i < TOTAL_FACES; i++) {
-                const el = createFaceElement(faces[i], i);
+            for (let i = 0; i < dominos.length; i++) {
+                const el = createDominoElement(dominos[i], i);
                 grid.appendChild(el);
-                faceElements.push(el);
+                dominoElements.push(el);
             }
-            updateHalos();
         }
         
-        function updateFaceVisual(faceIndex) {
-            const face = faces[faceIndex];
-            const el = faceElements[faceIndex];
-            if (!el) return;
+        function updateDominoVisual(dominoIndex) {
+            const domino = dominos[dominoIndex];
+            const el = dominoElements[dominoIndex];
+            if (!el || !domino) return;
             
-            const pos = getSlotPosition(face.slot);
-            const useF2 = pos.isBottom;
-            const svgContent = renderIcon(face.icon, useF2, face.state);
+            const topFace = el.querySelector('.face.top');
+            const bottomFace = el.querySelector('.face.bottom');
             
-            el.innerHTML = `<svg viewBox="0 0 90 45">${svgContent}</svg>`;
+            if (topFace) {
+                const topEmpty = !domino.topIcon;
+                topFace.className = `face top ${domino.topState}${topEmpty ? ' empty' : ''}`;
+                topFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.topIcon, false, domino.topState)}</svg>`;
+            }
             
-            el.className = `face ${pos.isBottom ? 'bottom' : 'top'} ${face.state}`;
-            if (!face.icon) el.classList.add('empty');
+            if (bottomFace) {
+                const bottomEmpty = !domino.bottomIcon;
+                bottomFace.className = `face bottom ${domino.bottomState}${bottomEmpty ? ' empty' : ''}`;
+                bottomFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.bottomIcon, true, domino.bottomState)}</svg>`;
+            }
         }
         
-        function updateFacePosition(faceIndex, animate = true) {
-            const face = faces[faceIndex];
-            const el = faceElements[faceIndex];
-            if (!el) return;
+        function updateDominoPosition(dominoIndex, animate = true) {
+            const domino = dominos[dominoIndex];
+            const el = dominoElements[dominoIndex];
+            if (!el || !domino) return;
             
-            const pos = getSlotPosition(face.slot);
+            const pos = getCellPosition(domino.cellIndex);
             
             el.style.transition = animate ? 'top 0.15s ease-out, left 0.15s ease-out' : 'none';
             el.style.left = pos.x + 'px';
             el.style.top = pos.y + 'px';
-            
-            el.classList.remove('top', 'bottom');
-            el.classList.add(pos.isBottom ? 'bottom' : 'top');
         }
         
         function updateAllPositions(animate = true) {
-            for (let i = 0; i < TOTAL_FACES; i++) {
-                updateFacePosition(i, animate);
-                updateFaceVisual(i);
-            }
-            updateHalos();
-        }
-        
-        // ============================================
-        // HALOS EXTERNES (domino complet de même état)
-        // ============================================
-        
-        function updateHalos() {
-            // Pour chaque cellule (domino), vérifier si les 2 faces ont le même état
-            for (let cell = 0; cell < TOTAL_CELLS; cell++) {
-                const topSlot = cell * 2;
-                const bottomSlot = cell * 2 + 1;
-                
-                const topFaceIdx = getFaceIndexBySlot(topSlot);
-                const bottomFaceIdx = getFaceIndexBySlot(bottomSlot);
-                
-                if (topFaceIdx < 0 || bottomFaceIdx < 0) continue;
-                
-                const topFace = faces[topFaceIdx];
-                const bottomFace = faces[bottomFaceIdx];
-                const topEl = faceElements[topFaceIdx];
-                const bottomEl = faceElements[bottomFaceIdx];
-                
-                if (!topEl || !bottomEl) continue;
-                
-                // Enlever tous les halos existants
-                topEl.classList.remove('halo-silver', 'halo-gold', 'halo-emerald', 'halo-cosmic');
-                bottomEl.classList.remove('halo-silver', 'halo-gold', 'halo-emerald', 'halo-cosmic');
-                
-                // Si les 2 faces ont le même état (et pas white/empty)
-                if (topFace.state === bottomFace.state && 
-                    topFace.state !== 'white' && 
-                    topFace.icon !== null && 
-                    bottomFace.icon !== null) {
-                    
-                    const haloClass = 'halo-' + topFace.state;
-                    topEl.classList.add(haloClass);
-                    bottomEl.classList.add(haloClass);
+            for (let i = 0; i < dominos.length; i++) {
+                updateDominoPosition(i, animate);
+                updateDominoVisual(i);
+                // Réappliquer la rotation
+                const el = dominoElements[i];
+                if (el) {
+                    el.style.transform = `rotate(${dominos[i].rotation}deg)`;
                 }
             }
         }
         
         // ============================================
-        // SYSTÈME DE GRAVITÉ (linéaire, pas wrap-around)
+        // ROTATION DOMINO (style v27)
         // ============================================
         
-        function applyGravity() {
-            let anyMoved = false;
-            const fallenFaces = [];
+        function rotateDomino(dominoIndex, clockwise = true) {
+            if (isAnimating) return;
             
-            // Pour chaque colonne
-            for (let col = 0; col < COLS; col++) {
-                const slots = getColumnSlots(col);
-                // slots[0] = top de row 0 (le plus haut)
-                // slots[11] = bottom de row 5 (le plus bas)
-                
-                // Parcourir de bas en haut
-                for (let i = slots.length - 1; i >= 0; i--) {
-                    const currentSlot = slots[i];
-                    const currentFaceIdx = getFaceIndexBySlot(currentSlot);
+            const domino = dominos[dominoIndex];
+            if (!domino) return;
+            
+            const el = dominoElements[dominoIndex];
+            if (!el) return;
+            
+            // Calculer la nouvelle rotation
+            const delta = clockwise ? 90 : -90;
+            domino.rotation += delta;
+            
+            // Animer la rotation
+            el.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            el.style.transform = `rotate(${domino.rotation}deg)`;
+            
+            log(`Rotation ${clockwise ? 'horaire' : 'antihoraire'} → ${domino.rotation}°`);
+            
+            // Après animation, mettre à jour visuels et vérifier fusions
+            setTimeout(() => {
+                updateDominoVisual(dominoIndex);
+                checkFusions();
+            }, 300);
+        }
+        
+        // ============================================
+        // SYSTÈME DE FUSION (corridor entre dominos)
+        // ============================================
+        
+        // Obtenir la face exposée d'un domino dans une direction
+        // en tenant compte de sa rotation
+        function getExposedFace(domino, direction) {
+            if (!domino) return null;
+            
+            const r = ((domino.rotation % 360) + 360) % 360;
+            
+            // Mapping selon rotation et direction demandée
+            // À 0°: top=haut, bottom=bas
+            // À 90°: top=droite, bottom=gauche
+            // À 180°: top=bas, bottom=haut
+            // À 270°: top=gauche, bottom=droite
+            
+            const mapping = {
+                0:   { top: 'top', bottom: 'bottom', left: null, right: null },
+                90:  { top: null, bottom: null, left: 'bottom', right: 'top' },
+                180: { top: 'bottom', bottom: 'top', left: null, right: null },
+                270: { top: null, bottom: null, left: 'top', right: 'bottom' }
+            };
+            
+            const faceName = mapping[r]?.[direction];
+            if (!faceName) return null;
+            
+            return {
+                icon: domino[faceName + 'Icon'],
+                state: domino[faceName + 'State'],
+                faceName: faceName
+            };
+        }
+        
+        function getAdjacentPairs() {
+            const pairs = [];
+            
+            // Vérifier les paires verticales (bottom de row N vs top de row N+1)
+            for (let row = 0; row < ROWS - 1; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const topCellIndex = row * COLS + col;
+                    const bottomCellIndex = (row + 1) * COLS + col;
                     
-                    if (currentFaceIdx < 0) continue;
+                    const topDomino = getDominoByCell(topCellIndex);
+                    const bottomDomino = getDominoByCell(bottomCellIndex);
                     
-                    const currentFace = faces[currentFaceIdx];
-                    
-                    // Si ce slot contient une face vide, chercher une face pleine au-dessus
-                    if (currentFace.icon === null) {
-                        for (let j = i - 1; j >= 0; j--) {
-                            const aboveSlot = slots[j];
-                            const aboveFaceIdx = getFaceIndexBySlot(aboveSlot);
-                            
-                            if (aboveFaceIdx < 0) continue;
-                            
-                            const aboveFace = faces[aboveFaceIdx];
-                            
-                            if (aboveFace.icon !== null) {
-                                // SWAP : la face pleine descend, la face vide monte
-                                const tempSlot = currentFace.slot;
-                                currentFace.slot = aboveFace.slot;
-                                aboveFace.slot = tempSlot;
-                                
-                                fallenFaces.push(aboveFaceIdx);
-                                anyMoved = true;
-                                break;
-                            }
+                    if (topDomino && bottomDomino) {
+                        const topExposed = getExposedFace(topDomino, 'bottom');
+                        const bottomExposed = getExposedFace(bottomDomino, 'top');
+                        
+                        if (topExposed && bottomExposed && topExposed.icon && bottomExposed.icon) {
+                            pairs.push({
+                                domino1: topDomino,
+                                domino1Index: getDominoIndexByCell(topCellIndex),
+                                face1: topExposed,
+                                domino2: bottomDomino,
+                                domino2Index: getDominoIndexByCell(bottomCellIndex),
+                                face2: bottomExposed,
+                                direction: 'vertical'
+                            });
                         }
                     }
                 }
             }
             
-            if (anyMoved) {
-                log(`Gravité: ${fallenFaces.length} faces tombées`);
-                
-                // Mettre à jour les positions avec animation
-                isAnimating = true;
-                updateAllPositions(true);
-                
-                // Après l'animation, continuer (cascade)
-                setTimeout(() => {
-                    isAnimating = false;
-                    applyGravity(); // Récursif jusqu'à stabilité
-                }, 200);
-            } else {
-                // Gravité terminée, vérifier les fusions
-                log('Gravité stable, check fusions...');
-                checkFusions();
-            }
-        }
-        
-        // ============================================
-        // SYSTÈME DE FUSION
-        // ============================================
-        
-        // Trouver les paires adjacentes sur les corridors (entre les lignes)
-        function getAdjacentPairs() {
-            const pairs = [];
-            
-            // Corridor = zone entre row N (bottom) et row N+1 (top)
-            for (let row = 0; row < ROWS - 1; row++) {
-                for (let col = 0; col < COLS; col++) {
-                    const bottomSlot = (row * COLS + col) * 2 + 1;      // bottom de row N
-                    const topSlot = ((row + 1) * COLS + col) * 2;       // top de row N+1
+            // Vérifier les paires horizontales (right de col N vs left de col N+1)
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS - 1; col++) {
+                    const leftCellIndex = row * COLS + col;
+                    const rightCellIndex = row * COLS + col + 1;
                     
-                    const bottomFaceIdx = getFaceIndexBySlot(bottomSlot);
-                    const topFaceIdx = getFaceIndexBySlot(topSlot);
+                    const leftDomino = getDominoByCell(leftCellIndex);
+                    const rightDomino = getDominoByCell(rightCellIndex);
                     
-                    if (bottomFaceIdx >= 0 && topFaceIdx >= 0) {
-                        pairs.push({ bottomFaceIdx, topFaceIdx, col, row });
+                    if (leftDomino && rightDomino) {
+                        const leftExposed = getExposedFace(leftDomino, 'right');
+                        const rightExposed = getExposedFace(rightDomino, 'left');
+                        
+                        if (leftExposed && rightExposed && leftExposed.icon && rightExposed.icon) {
+                            pairs.push({
+                                domino1: leftDomino,
+                                domino1Index: getDominoIndexByCell(leftCellIndex),
+                                face1: leftExposed,
+                                domino2: rightDomino,
+                                domino2Index: getDominoIndexByCell(rightCellIndex),
+                                face2: rightExposed,
+                                direction: 'horizontal'
+                            });
+                        }
                     }
                 }
             }
@@ -631,99 +601,54 @@
             
             const pairs = getAdjacentPairs();
             
-            console.log('=== CHECK FUSIONS ===');
-            
             for (const pair of pairs) {
-                const bottomFace = faces[pair.bottomFaceIdx];
-                const topFace = faces[pair.topFaceIdx];
+                // Les deux faces exposées doivent avoir la même icône
+                if (pair.face1.icon !== pair.face2.icon) continue;
                 
-                // Les deux faces doivent avoir la même icône (et ne pas être vides)
-                if (!bottomFace.icon || !topFace.icon) continue;
-                if (bottomFace.icon !== topFace.icon) continue;
+                console.log(`FUSION: ${pair.face1.icon} (${pair.direction})`);
                 
-                // Match trouvé ! On fusionne immédiatement
-                console.log(`FUSION: ${bottomFace.icon} @ col ${pair.col}, row ${pair.row}/${pair.row+1}`);
-                
-                // Le percuteur est celui du bas (arbitraire mais cohérent)
-                performFusion(pair.bottomFaceIdx, pair.topFaceIdx);
-                return; // Une fusion à la fois
+                performFusion(pair);
+                return;
             }
             
-            // Pas de fusion
             log('Prêt');
         }
         
-        function performFusion(percuteurIdx, receveurIdx) {
+        function performFusion(pair) {
             isAnimating = true;
             
-            const percuteur = faces[percuteurIdx];
-            const receveur = faces[receveurIdx];
+            const el1 = dominoElements[pair.domino1Index];
+            const el2 = dominoElements[pair.domino2Index];
             
-            const percuteurEl = faceElements[percuteurIdx];
-            const receveurEl = faceElements[receveurIdx];
-            
-            // Animation
-            percuteurEl.classList.add('fusion-tilt');
-            receveurEl.classList.add('fusion-receive');
+            el1.classList.add('fusion-tilt');
+            el2.classList.add('fusion-receive');
             
             setTimeout(() => {
-                // Montée en gamme du receveur
-                const currentStateIdx = STATE_ORDER.indexOf(receveur.state);
-                const percuteurStateIdx = STATE_ORDER.indexOf(percuteur.state);
+                // Le receveur (domino2) monte en état
+                const currentStateIdx = STATE_ORDER.indexOf(pair.face2.state);
+                const percuteurStateIdx = STATE_ORDER.indexOf(pair.face1.state);
                 const newStateIdx = Math.min(currentStateIdx + percuteurStateIdx + 1, STATE_ORDER.length - 1);
-                receveur.state = STATE_ORDER[newStateIdx];
                 
-                // Percuteur devient vide (mais reste dans son slot)
-                percuteur.icon = null;
-                percuteur.state = 'white';
+                // Mettre à jour la face du receveur
+                pair.domino2[pair.face2.faceName + 'State'] = STATE_ORDER[newStateIdx];
+                
+                // Le percuteur perd son icône
+                pair.domino1[pair.face1.faceName + 'Icon'] = null;
+                pair.domino1[pair.face1.faceName + 'State'] = 'white';
                 
                 // Mettre à jour les visuels
-                updateFaceVisual(percuteurIdx);
-                updateFaceVisual(receveurIdx);
-                updateHalos();
+                updateDominoVisual(pair.domino1Index);
+                updateDominoVisual(pair.domino2Index);
                 
-                // Nettoyer les animations
-                percuteurEl.classList.remove('fusion-tilt');
-                receveurEl.classList.remove('fusion-receive');
+                el1.classList.remove('fusion-tilt');
+                el2.classList.remove('fusion-receive');
                 
                 isAnimating = false;
                 
-                // Après fusion, appliquer la gravité (qui vérifiera ensuite les fusions)
                 setTimeout(() => {
-                    applyGravity();
+                    checkFusions();
                 }, 100);
             }, 400);
-        }
-        
-        // ============================================
-        // ROTATION (tap sur domino)
-        // ============================================
-        
-        function rotateDomino(cellIndex) {
-            if (isAnimating) return;
-            
-            const topSlot = cellIndex * 2;
-            const bottomSlot = cellIndex * 2 + 1;
-            
-            const topFaceIdx = getFaceIndexBySlot(topSlot);
-            const bottomFaceIdx = getFaceIndexBySlot(bottomSlot);
-            
-            if (topFaceIdx < 0 || bottomFaceIdx < 0) return;
-            
-            // Swap les slots
-            faces[topFaceIdx].slot = bottomSlot;
-            faces[bottomFaceIdx].slot = topSlot;
-            
-            // Mettre à jour visuels
-            updateFaceVisual(topFaceIdx);
-            updateFaceVisual(bottomFaceIdx);
-            updateFacePosition(topFaceIdx, true);
-            updateFacePosition(bottomFaceIdx, true);
-            
-            log(`Rotation cellule ${cellIndex}`);
-            
-            // Vérifier les fusions après rotation
-            setTimeout(checkFusions, 200);
         }
         
         // ============================================
@@ -733,84 +658,54 @@
         function createGhostsForColumn(col) {
             clearGhosts();
             
-            const slots = getColumnSlots(col);
-            
-            for (const slot of slots) {
-                const faceIndex = getFaceIndexBySlot(slot);
-                if (faceIndex < 0) continue;
+            for (let row = 0; row < ROWS; row++) {
+                const cellIndex = row * COLS + col;
+                const dominoIndex = getDominoIndexByCell(cellIndex);
+                if (dominoIndex < 0) continue;
                 
-                const face = faces[faceIndex];
-                const pos = getSlotPosition(slot);
+                const domino = dominos[dominoIndex];
+                const pos = getCellPosition(cellIndex);
                 
                 // Ghost en haut
-                const ghostTop = createFaceElement(face, faceIndex);
+                const ghostTop = createDominoElement(domino, dominoIndex);
                 ghostTop.classList.add('ghost');
                 ghostTop.style.top = (pos.y - GRID_HEIGHT) + 'px';
                 grid.appendChild(ghostTop);
-                ghostElements.push({ el: ghostTop, baseY: pos.y - GRID_HEIGHT, slot });
+                ghostElements.push({ el: ghostTop, baseY: pos.y - GRID_HEIGHT, dominoIndex });
                 
                 // Ghost en bas
-                const ghostBottom = createFaceElement(face, faceIndex);
+                const ghostBottom = createDominoElement(domino, dominoIndex);
                 ghostBottom.classList.add('ghost');
                 ghostBottom.style.top = (pos.y + GRID_HEIGHT) + 'px';
                 grid.appendChild(ghostBottom);
-                ghostElements.push({ el: ghostBottom, baseY: pos.y + GRID_HEIGHT, slot });
+                ghostElements.push({ el: ghostBottom, baseY: pos.y + GRID_HEIGHT, dominoIndex });
             }
         }
         
         function createGhostsForRow(row) {
             clearGhosts();
             
-            const slots = getRowSlots(row);
-            
-            for (const slot of slots) {
-                const faceIndex = getFaceIndexBySlot(slot);
-                if (faceIndex < 0) continue;
+            for (let col = 0; col < COLS; col++) {
+                const cellIndex = row * COLS + col;
+                const dominoIndex = getDominoIndexByCell(cellIndex);
+                if (dominoIndex < 0) continue;
                 
-                const face = faces[faceIndex];
-                const pos = getSlotPosition(slot);
+                const domino = dominos[dominoIndex];
+                const pos = getCellPosition(cellIndex);
                 
                 // Ghost à gauche
-                const ghostLeft = createFaceElement(face, faceIndex);
+                const ghostLeft = createDominoElement(domino, dominoIndex);
                 ghostLeft.classList.add('ghost');
                 ghostLeft.style.left = (pos.x - GRID_WIDTH) + 'px';
                 grid.appendChild(ghostLeft);
-                ghostElements.push({ el: ghostLeft, baseX: pos.x - GRID_WIDTH, slot });
+                ghostElements.push({ el: ghostLeft, baseX: pos.x - GRID_WIDTH, dominoIndex });
                 
                 // Ghost à droite
-                const ghostRight = createFaceElement(face, faceIndex);
+                const ghostRight = createDominoElement(domino, dominoIndex);
                 ghostRight.classList.add('ghost');
                 ghostRight.style.left = (pos.x + GRID_WIDTH) + 'px';
                 grid.appendChild(ghostRight);
-                ghostElements.push({ el: ghostRight, baseX: pos.x + GRID_WIDTH, slot });
-            }
-        }
-        
-        function createGhostsForEtage(etage) {
-            clearGhosts();
-            
-            const slots = getEtageSlots(etage);
-            
-            for (const slot of slots) {
-                const faceIndex = getFaceIndexBySlot(slot);
-                if (faceIndex < 0) continue;
-                
-                const face = faces[faceIndex];
-                const pos = getSlotPosition(slot);
-                
-                // Ghost à gauche
-                const ghostLeft = createFaceElement(face, faceIndex);
-                ghostLeft.classList.add('ghost');
-                ghostLeft.style.left = (pos.x - GRID_WIDTH) + 'px';
-                grid.appendChild(ghostLeft);
-                ghostElements.push({ el: ghostLeft, baseX: pos.x - GRID_WIDTH, slot });
-                
-                // Ghost à droite
-                const ghostRight = createFaceElement(face, faceIndex);
-                ghostRight.classList.add('ghost');
-                ghostRight.style.left = (pos.x + GRID_WIDTH) + 'px';
-                grid.appendChild(ghostRight);
-                ghostElements.push({ el: ghostRight, baseX: pos.x + GRID_WIDTH, slot });
+                ghostElements.push({ el: ghostRight, baseX: pos.x + GRID_WIDTH, dominoIndex });
             }
         }
         
@@ -827,15 +722,13 @@
         let dragAxis = null;
         let dragCol = -1;
         let dragRow = -1;
-        let dragEtage = -1;  // 0-11 pour les 12 étages horizontaux
         let dragStartX = 0;
         let dragStartY = 0;
         let dragOffset = 0;
         let initialPositions = [];
-        let draggedFaceIndices = [];
         
         // ============================================
-        // DRAG VERTICAL (colonne, wrap-around)
+        // DRAG VERTICAL
         // ============================================
         
         function startVerticalDrag(col) {
@@ -843,64 +736,31 @@
             
             dragAxis = 'vertical';
             dragCol = col;
-            
-            const slots = getColumnSlots(col);
-            draggedFaceIndices = [];
             initialPositions = [];
             
-            for (const slot of slots) {
-                const faceIdx = getFaceIndexBySlot(slot);
-                if (faceIdx < 0) continue;
+            for (let row = 0; row < ROWS; row++) {
+                const cellIndex = row * COLS + col;
+                const dominoIndex = getDominoIndexByCell(cellIndex);
+                if (dominoIndex < 0) continue;
                 
-                const pos = getSlotPosition(slot);
-                draggedFaceIndices.push(faceIdx);
+                const pos = getCellPosition(cellIndex);
                 initialPositions.push({
-                    faceIdx,
+                    dominoIndex,
                     baseY: pos.y,
-                    originalRow: pos.row,
-                    isBottom: pos.isBottom
+                    originalRow: row
                 });
             }
             
             createGhostsForColumn(col);
         }
         
-        function applyVerticalSlide(col, steps) {
-            steps = ((steps % ROWS) + ROWS) % ROWS;
-            if (steps === 0) return;
-            
-            const slots = getColumnSlots(col);
-            const moves = [];
-            
-            for (const slot of slots) {
-                const faceIdx = getFaceIndexBySlot(slot);
-                if (faceIdx < 0) continue;
-                
-                const cellIndex = Math.floor(slot / 2);
-                const isBottom = slot % 2 === 1;
-                const oldRow = Math.floor(cellIndex / COLS);
-                
-                const newRow = ((oldRow + steps) % ROWS + ROWS) % ROWS;
-                const newCellIndex = newRow * COLS + col;
-                const newSlot = newCellIndex * 2 + (isBottom ? 1 : 0);
-                
-                moves.push({ faceIdx, newSlot });
-            }
-            
-            for (const move of moves) {
-                faces[move.faceIdx].slot = move.newSlot;
-            }
-        }
-        
         function endVerticalDrag(steps) {
-            // Animation vers position finale
+            // Animer vers position finale
             for (const item of initialPositions) {
-                const el = faceElements[item.faceIdx];
-                
+                const el = dominoElements[item.dominoIndex];
                 const newRow = ((item.originalRow + steps) % ROWS + ROWS) % ROWS;
-                const targetY = newRow * CELL_TOTAL + (item.isBottom ? HALF_SIZE : 0);
+                const targetY = newRow * CELL_TOTAL;
                 
-                // Position courante après drag
                 let currentY = item.baseY + dragOffset;
                 while (currentY - targetY > GRID_HEIGHT / 2) currentY -= GRID_HEIGHT;
                 while (targetY - currentY > GRID_HEIGHT / 2) currentY += GRID_HEIGHT;
@@ -909,30 +769,34 @@
                 el.style.top = currentY + 'px';
             }
             
-            // Forcer reflow
             grid.offsetHeight;
             
-            // Animer vers position cible
             for (const item of initialPositions) {
-                const el = faceElements[item.faceIdx];
+                const el = dominoElements[item.dominoIndex];
                 const newRow = ((item.originalRow + steps) % ROWS + ROWS) % ROWS;
-                const targetY = newRow * CELL_TOTAL + (item.isBottom ? HALF_SIZE : 0);
+                const targetY = newRow * CELL_TOTAL;
                 
                 el.style.transition = 'top 0.15s ease-out';
                 el.style.top = targetY + 'px';
             }
             
-            // Appliquer les nouveaux slots
-            applyVerticalSlide(dragCol, steps);
+            // Mettre à jour les cellIndex
+            const colDominos = initialPositions.map(item => ({
+                dominoIndex: item.dominoIndex,
+                newRow: ((item.originalRow + steps) % ROWS + ROWS) % ROWS
+            }));
             
-            // Après animation, nettoyer et lancer gravité
+            for (const item of colDominos) {
+                dominos[item.dominoIndex].cellIndex = item.newRow * COLS + dragCol;
+            }
+            
             setTimeout(() => {
                 clearGhosts();
                 updateAllPositions(false);
                 
                 if (steps !== 0) {
                     log(`Drag vertical col ${dragCol}, ${steps} steps`);
-                    applyGravity(); // Gravité puis fusions
+                    checkFusions();
                 } else {
                     log('Prêt');
                 }
@@ -940,69 +804,35 @@
         }
         
         // ============================================
-        // DRAG HORIZONTAL (étage = 4 faces, wrap-around, pas de gravité)
+        // DRAG HORIZONTAL
         // ============================================
         
-        function startHorizontalDrag(etage) {
+        function startHorizontalDrag(row) {
             if (isAnimating) return;
             
             dragAxis = 'horizontal';
-            dragEtage = etage;
-            dragRow = Math.floor(etage / 2);  // Garder pour référence
-            
-            const slots = getEtageSlots(etage);
-            draggedFaceIndices = [];
+            dragRow = row;
             initialPositions = [];
             
-            for (const slot of slots) {
-                const faceIdx = getFaceIndexBySlot(slot);
-                if (faceIdx < 0) continue;
+            for (let col = 0; col < COLS; col++) {
+                const cellIndex = row * COLS + col;
+                const dominoIndex = getDominoIndexByCell(cellIndex);
+                if (dominoIndex < 0) continue;
                 
-                const pos = getSlotPosition(slot);
-                draggedFaceIndices.push(faceIdx);
+                const pos = getCellPosition(cellIndex);
                 initialPositions.push({
-                    faceIdx,
+                    dominoIndex,
                     baseX: pos.x,
-                    originalCol: pos.col,
-                    isBottom: pos.isBottom
+                    originalCol: col
                 });
             }
             
-            createGhostsForEtage(etage);
-        }
-        
-        function applyHorizontalSlide(etage, steps) {
-            steps = ((steps % COLS) + COLS) % COLS;
-            if (steps === 0) return;
-            
-            const slots = getEtageSlots(etage);
-            const row = Math.floor(etage / 2);
-            const moves = [];
-            
-            for (const slot of slots) {
-                const faceIdx = getFaceIndexBySlot(slot);
-                if (faceIdx < 0) continue;
-                
-                const cellIndex = Math.floor(slot / 2);
-                const isBottom = slot % 2 === 1;
-                const oldCol = cellIndex % COLS;
-                
-                const newCol = ((oldCol + steps) % COLS + COLS) % COLS;
-                const newCellIndex = row * COLS + newCol;
-                const newSlot = newCellIndex * 2 + (isBottom ? 1 : 0);
-                
-                moves.push({ faceIdx, newSlot });
-            }
-            
-            for (const move of moves) {
-                faces[move.faceIdx].slot = move.newSlot;
-            }
+            createGhostsForRow(row);
         }
         
         function endHorizontalDrag(steps) {
             for (const item of initialPositions) {
-                const el = faceElements[item.faceIdx];
-                
+                const el = dominoElements[item.dominoIndex];
                 const newCol = ((item.originalCol + steps) % COLS + COLS) % COLS;
                 const targetX = newCol * CELL_TOTAL;
                 
@@ -1017,7 +847,7 @@
             grid.offsetHeight;
             
             for (const item of initialPositions) {
-                const el = faceElements[item.faceIdx];
+                const el = dominoElements[item.dominoIndex];
                 const newCol = ((item.originalCol + steps) % COLS + COLS) % COLS;
                 const targetX = newCol * CELL_TOTAL;
                 
@@ -1025,15 +855,22 @@
                 el.style.left = targetX + 'px';
             }
             
-            applyHorizontalSlide(dragEtage, steps);
+            // Mettre à jour les cellIndex
+            const rowDominos = initialPositions.map(item => ({
+                dominoIndex: item.dominoIndex,
+                newCol: ((item.originalCol + steps) % COLS + COLS) % COLS
+            }));
+            
+            for (const item of rowDominos) {
+                dominos[item.dominoIndex].cellIndex = dragRow * COLS + item.newCol;
+            }
             
             setTimeout(() => {
                 clearGhosts();
                 updateAllPositions(false);
                 
                 if (steps !== 0) {
-                    log(`Drag horizontal étage ${dragEtage}, ${steps} steps`);
-                    // PAS de gravité pour horizontal, juste check fusions
+                    log(`Drag horizontal row ${dragRow}, ${steps} steps`);
                     checkFusions();
                 } else {
                     log('Prêt');
@@ -1053,7 +890,7 @@
                 dragOffset = clientY - dragStartY;
                 
                 for (const item of initialPositions) {
-                    const el = faceElements[item.faceIdx];
+                    const el = dominoElements[item.dominoIndex];
                     el.style.transition = 'none';
                     el.style.top = (item.baseY + dragOffset) + 'px';
                 }
@@ -1067,7 +904,7 @@
                 dragOffset = clientX - dragStartX;
                 
                 for (const item of initialPositions) {
-                    const el = faceElements[item.faceIdx];
+                    const el = dominoElements[item.dominoIndex];
                     el.style.transition = 'none';
                     el.style.left = (item.baseX + dragOffset) + 'px';
                 }
@@ -1079,7 +916,7 @@
             }
         }
         
-        function endDrag(e) {
+        function endDrag() {
             if (!isDragging) return;
             
             if (dragAxis === 'vertical') {
@@ -1089,7 +926,6 @@
                 const steps = Math.round(dragOffset / CELL_TOTAL);
                 endHorizontalDrag(steps);
             } else {
-                // Pas de mouvement, reset
                 clearGhosts();
             }
             
@@ -1097,9 +933,7 @@
             dragAxis = null;
             dragCol = -1;
             dragRow = -1;
-            dragEtage = -1;
             initialPositions = [];
-            draggedFaceIndices = [];
         }
         
         // ============================================
@@ -1113,8 +947,9 @@
         document.addEventListener('mouseup', handleEnd);
         document.addEventListener('touchend', handleEnd);
         
-        let clickedFaceIdx = null;
+        let clickedDominoIndex = null;
         let clickStartTime = 0;
+        let clickLocalX = 0;
         
         function handleStart(e) {
             if (isAnimating) return;
@@ -1122,19 +957,21 @@
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             
-            const faceEl = e.target.closest('.face');
-            if (faceEl && !faceEl.classList.contains('ghost')) {
+            const dominoEl = e.target.closest('.domino');
+            if (dominoEl && !dominoEl.classList.contains('ghost')) {
                 e.preventDefault();
                 
-                clickedFaceIdx = parseInt(faceEl.dataset.index);
+                clickedDominoIndex = parseInt(dominoEl.dataset.index);
                 clickStartTime = Date.now();
                 
-                const face = faces[clickedFaceIdx];
-                const pos = getSlotPosition(face.slot);
+                // Position locale X dans le domino
+                const rect = dominoEl.getBoundingClientRect();
+                clickLocalX = clientX - rect.left;
+                
+                const domino = dominos[clickedDominoIndex];
+                const pos = getCellPosition(domino.cellIndex);
                 dragRow = pos.row;
                 dragCol = pos.col;
-                // Calculer l'étage : row * 2 + (0 si top, 1 si bottom)
-                dragEtage = pos.row * 2 + (pos.isBottom ? 1 : 0);
                 
                 isDragging = true;
                 dragAxis = null;
@@ -1157,7 +994,7 @@
                 const threshold = 8;
                 if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
                     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        startHorizontalDrag(dragEtage);
+                        startHorizontalDrag(dragRow);
                     } else {
                         startVerticalDrag(dragCol);
                     }
@@ -1176,18 +1013,18 @@
             const distance = Math.abs(dragOffset);
             
             // Tap = rotation
-            if (dragAxis === null && distance < 8 && elapsed < 300 && clickedFaceIdx !== null) {
-                const face = faces[clickedFaceIdx];
-                const cellIndex = Math.floor(face.slot / 2);
-                rotateDomino(cellIndex);
+            if (dragAxis === null && distance < 8 && elapsed < 250 && clickedDominoIndex !== null) {
+                // Sens selon position du tap (gauche = antihoraire, droite = horaire)
+                const clockwise = clickLocalX > (CELL_SIZE / 2);
+                rotateDomino(clickedDominoIndex, clockwise);
                 
                 isDragging = false;
-                clickedFaceIdx = null;
+                clickedDominoIndex = null;
                 return;
             }
             
-            endDrag(e);
-            clickedFaceIdx = null;
+            endDrag();
+            clickedDominoIndex = null;
         }
         
         // ============================================
@@ -1196,11 +1033,10 @@
         
         function init() {
             updateDimensions();
-            initFaces();
+            initDominos();
             initialRender();
-            log('ADAM V4 - 12 Étages prêt');
+            log('ADAM V4 - Rotation Domino prêt');
             
-            // Vérifier les fusions au démarrage
             setTimeout(checkFusions, 100);
         }
         
