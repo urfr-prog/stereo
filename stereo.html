@@ -2,1054 +2,169 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM v4 - Rotation Domino</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fabrique à Sigles - ADAM</title>
+    <!--
+    ══════════════════════════════════════════════════════════════
+    RÈGLE DE FABRICATION : SYMÉTRIE ROTATIONNELLE D'ORDRE 4
+    ══════════════════════════════════════════════════════════════
+    1. Dessiner UN motif dans le quadrant supérieur-gauche
+    2. Répéter par rotation 90°, 180°, 270° autour du centre (50,50)
+    3. Résultat : sigle identique après rotation de 90°
+    
+    CRITÈRES VISUELS : Volume, présence, puissance graphique
+    Éviter les traits trop fins ou isolés
+    ══════════════════════════════════════════════════════════════
+    -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; overflow: hidden; }
-        body {
-            background-color: #12131a;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
+        body { background: #12131a; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 15px; font-family: system-ui, sans-serif; }
+        h1 { color: rgba(180,180,190,0.5); font-weight: 300; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 90px); gap: 25px 15px; }
+        .icon-box { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .square { width: 90px; height: 90px; border: 1px solid rgba(180,180,190,0.35); border-radius: 12px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.3s; }
+        .square svg { width: 70px; height: 70px; }
+        .icon-name { color: rgba(180,180,190,0.4); font-size: 9px; }
+        svg .cross { stroke: rgba(180,180,190,0.12); stroke-width: 0.5; }
+        svg .stroke { stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+        svg .fill { stroke: none; }
         
-        /* ========== GRILLE AVEC MASKING ========== */
-        .grid-wrapper {
-            position: relative;
-            --cell: min(80px, 18vw);
-            --half: calc(var(--cell) / 2);
-            --gap: 10px;
-            width: calc(4 * var(--cell) + 3 * var(--gap));
-            height: calc(6 * var(--cell) + 5 * var(--gap));
-            overflow: hidden;
-        }
+        /* ÉTATS ICÔNES */
+        svg .stroke.white { stroke: rgba(180,180,190,0.35); }
+        svg .fill.white { fill: rgba(180,180,190,0.35); }
+        svg .stroke.silver { stroke: #22d3ee; filter: drop-shadow(0 0 2px rgba(34,211,238,0.4)); }
+        svg .fill.silver { fill: #22d3ee; filter: drop-shadow(0 0 2px rgba(34,211,238,0.4)); }
+        svg .stroke.gold { stroke: #ffd700; filter: drop-shadow(0 0 4px rgba(255,215,0,0.6)); }
+        svg .fill.gold { fill: #ffd700; filter: drop-shadow(0 0 4px rgba(255,215,0,0.6)); }
+        svg .stroke.emerald { stroke: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.9)); }
+        svg .fill.emerald { fill: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.9)); }
+        svg .stroke.cosmic { stroke: #c4b5fd; filter: drop-shadow(0 0 6px rgba(131,56,236,0.7)); animation: cosmicShift 3s infinite; }
+        svg .fill.cosmic { fill: #c4b5fd; filter: drop-shadow(0 0 6px rgba(131,56,236,0.7)); animation: cosmicFill 1.5s infinite; }
+        svg .stroke.supernovae { stroke: #ffeb3b; filter: drop-shadow(0 0 6px rgba(255,215,0,0.7)); animation: superShift 2.5s infinite; }
+        svg .fill.supernovae { fill: #ffeb3b; filter: drop-shadow(0 0 6px rgba(255,215,0,0.7)); animation: superFill 1.2s infinite; }
         
-        .grid-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
+        /* ÉTATS BORDURES */
+        .square.silver { border-color: rgba(34,211,238,0.6); box-shadow: inset 0 0 15px rgba(34,211,238,0.15), 0 0 8px rgba(34,211,238,0.3); }
+        .square.gold { border-color: rgba(255,215,0,0.7); box-shadow: inset 0 0 20px rgba(255,215,0,0.2), 0 0 12px rgba(255,215,0,0.4); }
+        .square.emerald { border-color: rgba(52,211,153,0.8); box-shadow: inset 0 0 25px rgba(52,211,153,0.25), 0 0 15px rgba(52,211,153,0.5); }
+        .square.cosmic { border: 2px solid transparent; background: linear-gradient(#12131a,#12131a) padding-box, conic-gradient(from var(--a,0deg),#ff006e,#8338ec,#06b6d4,#34d399,#ffd700,#ff006e) border-box; animation: cRot 4s linear infinite; }
+        .square.supernovae { border: 3px solid transparent; background: linear-gradient(#12131a,#12131a) padding-box, conic-gradient(from var(--b,0deg),#ff4500,#ff8c00,#ffd700,#ffff00,#ff8c00,#ff4500) border-box; animation: sRot 3s linear infinite; }
         
-        /* Conteneur domino (2 faces) - c'est lui qui tourne */
-        .domino {
-            position: absolute;
-            width: var(--cell);
-            height: var(--cell);
-            cursor: pointer;
-            user-select: none;
-            touch-action: none;
-            z-index: 1;
-        }
-        
-        .domino.ghost {
-            opacity: 0.9;
-            pointer-events: none;
-            z-index: 0;
-        }
-        
-        /* Une face = demi-domino */
-        .face {
-            position: absolute;
-            left: 0;
-            width: 100%;
-            height: 50%;
-            background-color: #12131a;
-            border: 1px solid rgba(180, 180, 190, 0.35);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .face.empty {
-            opacity: 0.3;
-        }
-        
-        /* Bords arrondis selon position */
-        .face.top {
-            top: 0;
-            border-radius: 14px 14px 0 0;
-            border-bottom: 1px solid rgba(180, 180, 190, 0.35);
-        }
-        
-        .face.bottom {
-            bottom: 0;
-            border-radius: 0 0 14px 14px;
-            border-top: 1px solid rgba(180, 180, 190, 0.35);
-        }
-        
-        /* Icônes SVG dans les faces */
-        .face svg {
-            width: 90%;
-            height: 90%;
-        }
-        
-        svg line.icon,
-        svg path.icon,
-        svg circle.icon,
-        svg rect.icon {
-            stroke: rgba(180, 180, 190, 0.35);
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-        }
-        
-        svg path.icon.filled {
-            fill: rgba(180, 180, 190, 0.35);
-            stroke: none;
-        }
-        
-        svg circle.point {
-            fill: rgba(180, 180, 190, 0.35);
-            stroke: none;
-        }
-        
-        /* === ÉTATS === */
-        .face.white svg .icon { stroke: rgba(180, 180, 190, 0.35); }
-        .face.white svg .icon.filled { fill: rgba(180, 180, 190, 0.35); }
-        .face.white svg .point { fill: rgba(180, 180, 190, 0.35); }
-        
-        .face.silver svg .icon { 
-            stroke: #22d3ee; 
-            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
-        }
-        .face.silver svg .icon.filled { 
-            fill: #22d3ee; 
-            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
-        }
-        .face.silver svg .point { 
-            fill: #22d3ee; 
-            filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.4));
-        }
-        .face.silver {
-            box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.15);
-            border-color: rgba(6, 182, 212, 0.4);
-        }
-        
-        .face.gold svg .icon { 
-            stroke: #ffd700; 
-            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
-        }
-        .face.gold svg .icon.filled { 
-            fill: #ffd700; 
-            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
-        }
-        .face.gold svg .point { 
-            fill: #ffd700; 
-            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
-        }
-        .face.gold {
-            box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.15);
-            border-color: rgba(255, 215, 0, 0.5);
-        }
-        
-        .face.emerald svg .icon { 
-            stroke: #34d399; 
-            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
-        }
-        .face.emerald svg .icon.filled { 
-            fill: #34d399; 
-            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
-        }
-        .face.emerald svg .point { 
-            fill: #34d399; 
-            filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
-        }
-        .face.emerald {
-            box-shadow: inset 0 0 25px rgba(52, 211, 153, 0.2);
-            border-color: rgba(52, 211, 153, 0.6);
-        }
-        
-        .face.cosmic svg .icon { 
-            stroke: #c4b5fd; 
-            filter: drop-shadow(0 0 6px rgba(131, 56, 236, 0.7));
-        }
-        .face.cosmic svg .icon.filled { 
-            fill: #c4b5fd; 
-            filter: drop-shadow(0 0 6px rgba(131, 56, 236, 0.7));
-        }
-        .face.cosmic svg .point { 
-            fill: #c4b5fd; 
-            filter: drop-shadow(0 0 6px rgba(131, 56, 236, 0.7));
-        }
-        .face.cosmic {
-            box-shadow: inset 0 0 25px rgba(131, 56, 236, 0.2);
-            border-color: rgba(131, 56, 236, 0.6);
-        }
-        
-        /* === ANIMATION FUSION === */
-        @keyframes fusionTilt {
-            0% { transform: perspective(200px) rotateY(0deg); }
-            50% { transform: perspective(200px) rotateY(-25deg) scale(0.95); }
-            100% { transform: perspective(200px) rotateY(0deg) scale(0.9); opacity: 0.6; }
-        }
-        
-        @keyframes fusionReceive {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); filter: brightness(1.3); }
-            100% { transform: scale(1); }
-        }
-        
-        .fusion-tilt .face {
-            animation: fusionTilt 0.4s ease-out forwards;
-        }
-        
-        .fusion-receive .face {
-            animation: fusionReceive 0.4s ease-out;
-        }
-
-        /* Debug info */
-        .debug {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            color: rgba(180,180,190,0.7);
-            font-family: monospace;
-            font-size: 11px;
-            background: rgba(0,0,0,0.5);
-            padding: 8px;
-            border-radius: 4px;
-            max-width: 300px;
-        }
+        @property --a { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+        @property --b { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+        @keyframes cRot { to { --a:360deg; } }
+        @keyframes sRot { to { --b:360deg; } }
+        @keyframes cosmicShift { 0%,100%{stroke:#c4b5fd} 33%{stroke:#22d3ee} 66%{stroke:#f472b6} }
+        @keyframes cosmicFill { 0%,100%{fill:#c4b5fd} 50%{fill:#f472b6} }
+        @keyframes superShift { 0%,100%{stroke:#ffeb3b} 50%{stroke:#ff8c00} }
+        @keyframes superFill { 0%,100%{fill:#ffeb3b} 50%{fill:#ff8c00} }
     </style>
 </head>
 <body>
-    <div class="debug" id="debug">ADAM V4</div>
-    <div class="grid-wrapper" id="wrapper">
-        <div class="grid-container" id="grid"></div>
-    </div>
+    <h1>Fabrique à Sigles — clic = cycle états</h1>
+    <div class="grid" id="grid"></div>
     
     <script>
-        // ============================================
-        // CONSTANTES
-        // ============================================
-        const COLS = 4;
-        const ROWS = 6;
-        const TOTAL_CELLS = COLS * ROWS; // 24
+        const STATES = ['white','silver','gold','emerald','cosmic','supernovae'];
         
-        const STATE_ORDER = ['white', 'silver', 'gold', 'emerald', 'cosmic'];
+        const SIGLES = [
+            // === 12 GARDÉS (inchangés) ===
+            { name:'star4', svg:`<path d="M50 10 Q35 35 10 50 Q35 65 50 90 Q65 65 90 50 Q65 35 50 10 Z"/>` },
+            { name:'waves', svg:`<path d="M15 50 Q30 35 50 35 Q70 35 85 50"/><path d="M15 50 Q30 65 50 65 Q70 65 85 50"/><path d="M50 15 Q35 30 35 50 Q35 70 50 85"/><path d="M50 15 Q65 30 65 50 Q65 70 50 85"/>` },
+            { name:'arrows', svg:`<path d="M20 20 L50 40 L40 50 L20 20"/><path d="M80 20 L60 50 L50 40 L80 20"/><path d="M80 80 L50 60 L60 50 L80 80"/><path d="M20 80 L40 50 L50 60 L20 80"/>` },
+            { name:'flower', svg:`<path d="M50 50 Q30 30 50 15 Q70 30 50 50"/><path d="M50 50 Q70 30 85 50 Q70 70 50 50"/><path d="M50 50 Q70 70 50 85 Q30 70 50 50"/><path d="M50 50 Q30 70 15 50 Q30 30 50 50"/>` },
+            { name:'corners', svg:`<circle cx="25" cy="25" r="10"/><circle cx="75" cy="25" r="10"/><circle cx="75" cy="75" r="10"/><circle cx="25" cy="75" r="10"/><circle class="fill" cx="50" cy="50" r="5"/>`, hasFill:true },
+            { name:'diamond', svg:`<path d="M50 30 L70 50 L50 70 L30 50 Z"/><line x1="50" y1="30" x2="50" y2="12"/><line x1="70" y1="50" x2="88" y2="50"/><line x1="50" y1="70" x2="50" y2="88"/><line x1="30" y1="50" x2="12" y2="50"/>` },
+            { name:'dots', svg:`<circle class="fill" cx="50" cy="20" r="5"/><circle class="fill" cx="35" cy="28" r="4"/><circle class="fill" cx="80" cy="50" r="5"/><circle class="fill" cx="72" cy="35" r="4"/><circle class="fill" cx="50" cy="80" r="5"/><circle class="fill" cx="65" cy="72" r="4"/><circle class="fill" cx="20" cy="50" r="5"/><circle class="fill" cx="28" cy="65" r="4"/>`, onlyFill:true },
+            { name:'atom', svg:`<ellipse cx="50" cy="50" rx="35" ry="12" transform="rotate(45 50 50)"/><ellipse cx="50" cy="50" rx="35" ry="12" transform="rotate(-45 50 50)"/><circle class="fill" cx="50" cy="50" r="7"/>`, hasFill:true },
+            { name:'clover', svg:`<circle cx="50" cy="28" r="14"/><circle cx="72" cy="50" r="14"/><circle cx="50" cy="72" r="14"/><circle cx="28" cy="50" r="14"/><circle class="fill" cx="50" cy="50" r="6"/>`, hasFill:true },
+            { name:'orbit', svg:`<circle cx="50" cy="50" r="28"/><circle class="fill" cx="50" cy="22" r="6"/><circle class="fill" cx="78" cy="50" r="6"/><circle class="fill" cx="50" cy="78" r="6"/><circle class="fill" cx="22" cy="50" r="6"/>`, hasFill:true },
+            { name:'blade', svg:`<path d="M50 50 L42 15 Q50 8 58 15 L50 50"/><path d="M50 50 L85 42 Q92 50 85 58 L50 50"/><path d="M50 50 L58 85 Q50 92 42 85 L50 50"/><path d="M50 50 L15 58 Q8 50 15 42 L50 50"/>` },
+            { name:'shield', svg:`<path d="M50 18 L32 18 L32 32 L18 32 L18 50"/><path d="M82 50 L82 32 L68 32 L68 18 L50 18"/><path d="M50 82 L68 82 L68 68 L82 68 L82 50"/><path d="M18 50 L18 68 L32 68 L32 82 L50 82"/>` },
+            
+            // === 12 NOUVEAUX (créatifs, uniques, symétrie ordre 4) ===
+            
+            // Soleil avec rayons épais
+            { name:'sun', svg:`<circle cx="50" cy="50" r="16"/><path d="M50 12 L54 28 L50 34 L46 28 Z"/><path d="M88 50 L72 54 L66 50 L72 46 Z"/><path d="M50 88 L46 72 L50 66 L54 72 Z"/><path d="M12 50 L28 46 L34 50 L28 54 Z"/>` },
+            
+            // Engrenage carré
+            { name:'cog', svg:`<rect x="30" y="30" width="40" height="40" rx="5"/><rect x="42" y="10" width="16" height="20" rx="3"/><rect x="42" y="70" width="16" height="20" rx="3"/><rect x="10" y="42" width="20" height="16" rx="3"/><rect x="70" y="42" width="20" height="16" rx="3"/>` },
+            
+            // Tourbillon avec bras épais
+            { name:'swirl', svg:`<path d="M50 50 Q30 50 30 30 Q30 15 50 15 Q65 15 70 30"/><path d="M50 50 Q50 30 70 30 Q85 30 85 50 Q85 65 70 70"/><path d="M50 50 Q70 50 70 70 Q70 85 50 85 Q35 85 30 70"/><path d="M50 50 Q50 70 30 70 Q15 70 15 50 Q15 35 30 30"/>` },
+            
+            // Château / tourelles
+            { name:'castle', svg:`<rect x="20" y="20" width="15" height="15" rx="2"/><rect x="65" y="20" width="15" height="15" rx="2"/><rect x="65" y="65" width="15" height="15" rx="2"/><rect x="20" y="65" width="15" height="15" rx="2"/><path d="M35 27 L50 40 L65 27"/><path d="M73 35 L60 50 L73 65"/><path d="M65 73 L50 60 L35 73"/><path d="M27 65 L40 50 L27 35"/>` },
+            
+            // Hélice double
+            { name:'helix', svg:`<path d="M50 50 C35 45 25 30 25 15"/><path d="M50 50 C45 35 30 25 15 25"/><path d="M50 50 C55 35 70 25 85 25"/><path d="M50 50 C65 45 75 30 75 15"/><path d="M50 50 C65 55 75 70 75 85"/><path d="M50 50 C55 65 70 75 85 75"/><path d="M50 50 C35 55 25 70 25 85"/><path d="M50 50 C45 65 30 75 15 75"/><circle class="fill" cx="50" cy="50" r="6"/>`, hasFill:true },
+            
+            // Noeud entrelacé
+            { name:'knot', svg:`<path d="M35 15 Q50 35 50 50"/><path d="M65 15 Q50 35 50 50"/><path d="M85 35 Q65 50 50 50"/><path d="M85 65 Q65 50 50 50"/><path d="M65 85 Q50 65 50 50"/><path d="M35 85 Q50 65 50 50"/><path d="M15 65 Q35 50 50 50"/><path d="M15 35 Q35 50 50 50"/><circle class="fill" cx="35" cy="15" r="4"/><circle class="fill" cx="65" cy="15" r="4"/><circle class="fill" cx="85" cy="35" r="4"/><circle class="fill" cx="85" cy="65" r="4"/><circle class="fill" cx="65" cy="85" r="4"/><circle class="fill" cx="35" cy="85" r="4"/><circle class="fill" cx="15" cy="65" r="4"/><circle class="fill" cx="15" cy="35" r="4"/>`, hasFill:true },
+            
+            // Vagues concentriques carrées
+            { name:'pulse', svg:`<rect x="38" y="38" width="24" height="24" rx="4"/><rect x="28" y="28" width="44" height="44" rx="6" fill="none"/><rect x="18" y="18" width="64" height="64" rx="8" fill="none"/>` },
+            
+            // Croix pattée
+            { name:'cross', svg:`<path d="M50 10 L60 35 L85 35 L65 50 L85 65 L60 65 L50 90 L40 65 L15 65 L35 50 L15 35 L40 35 Z"/>` },
+            
+            // Bouclier avec croix
+            { name:'emblem', svg:`<circle cx="50" cy="50" r="32"/><path d="M50 22 L50 78"/><path d="M22 50 L78 50"/><circle class="fill" cx="50" cy="50" r="8"/>`, hasFill:true },
+            
+            // Etoile à 8 branches
+            { name:'nova', svg:`<path d="M50 10 L55 40 L50 50 L45 40 Z"/><path d="M90 50 L60 55 L50 50 L60 45 Z"/><path d="M50 90 L45 60 L50 50 L55 60 Z"/><path d="M10 50 L40 45 L50 50 L40 55 Z"/><path d="M78 22 L58 42 L50 50 L58 42 L78 22"/><path d="M78 78 L58 58 L50 50"/><path d="M22 78 L42 58 L50 50"/><path d="M22 22 L42 42 L50 50"/>` },
+            
+            // Moulin à vent
+            { name:'mill', svg:`<path d="M50 50 L40 20 Q50 15 60 20 L50 50"/><path d="M50 50 L80 40 Q85 50 80 60 L50 50"/><path d="M50 50 L60 80 Q50 85 40 80 L50 50"/><path d="M50 50 L20 60 Q15 50 20 40 L50 50"/><circle class="fill" cx="50" cy="50" r="8"/>`, hasFill:true },
+            
+            // Spirale quadruple
+            { name:'spiral', svg:`<path d="M50 50 Q40 45 40 35 Q40 20 50 15 Q62 15 68 25"/><path d="M50 50 Q55 40 65 40 Q80 40 85 50 Q85 62 75 68"/><path d="M50 50 Q60 55 60 65 Q60 80 50 85 Q38 85 32 75"/><path d="M50 50 Q45 60 35 60 Q20 60 15 50 Q15 38 25 32"/><circle class="fill" cx="50" cy="50" r="5"/>`, hasFill:true }
+        ];
         
-        const wrapper = document.getElementById('wrapper');
         const grid = document.getElementById('grid');
-        const debug = document.getElementById('debug');
         
-        // Dimensions calculées
-        let CELL_SIZE = 80;
-        let HALF_SIZE = 40;
-        let GAP = 10;
-        let CELL_TOTAL = 90;
-        let GRID_WIDTH = 360;
-        let GRID_HEIGHT = 540;
-        
-        // Flag pour bloquer pendant les animations
-        let isAnimating = false;
-        
-        function updateDimensions() {
-            const vw18 = window.innerWidth * 0.18;
-            CELL_SIZE = Math.min(80, vw18);
-            HALF_SIZE = CELL_SIZE / 2;
-            GAP = 10;
-            CELL_TOTAL = CELL_SIZE + GAP;
-            GRID_WIDTH = COLS * CELL_TOTAL;
-            GRID_HEIGHT = ROWS * CELL_TOTAL;
-        }
-        
-        function log(msg) {
-            console.log(msg);
-            debug.textContent = msg;
-        }
-        
-        // ============================================
-        // ICÔNES
-        // ============================================
-        const ICONS = {
-            chevron: { f1: 'M60 8L30 22.5L60 37', f2: 'M30 8L60 22.5L30 37', t: 'path' },
-            circle: { f1: '45,22.5,12', f2: '45,22.5,12', t: 'circle' },
-            twoCircles: { f1: '30,22.5,8|60,22.5,8', f2: '30,22.5,8|60,22.5,8', t: 'circles' },
-            line: { f1: '45,8,45,37', f2: '45,8,45,37', t: 'line' },
-            threeLines: { f1: '25,12,65,12|25,22.5,65,22.5|25,33,65,33', f2: '25,12,65,12|25,22.5,65,22.5|25,33,65,33', t: 'lines' },
-            twoPoints: { f1: '32,22.5,4|58,22.5,4', f2: '32,22.5,4|58,22.5,4', t: 'points' },
-            square: { f1: '33,10,25,25,3', f2: '33,10,25,25,3', t: 'rect' },
-            wave: { f1: 'M15 22.5Q35 8 45 22.5Q55 37 75 22.5', f2: 'M15 22.5Q35 37 45 22.5Q55 8 75 22.5', t: 'path' }
-        };
-        
-        const LEVEL1_ICONS = ['chevron', 'circle', 'twoCircles', 'line', 'threeLines', 'twoPoints', 'square', 'wave'];
-        const LEVEL_SEED = 12345;
-        
-        function seededRandom(seed) {
-            let state = seed;
-            return function() {
-                state = (state * 1103515245 + 12345) & 0x7fffffff;
-                return state / 0x7fffffff;
-            };
-        }
-        
-        function renderIcon(icon, isF2, stateClass) {
-            if (!icon) return '';
-            const d = ICONS[icon];
-            if (!d) return '';
-            const data = isF2 ? d.f2 : d.f1;
+        SIGLES.forEach((sigle) => {
+            const box = document.createElement('div');
+            box.className = 'icon-box';
+            box.dataset.state = '0';
             
-            if (d.t === 'path') {
-                return `<path class="icon ${stateClass}" d="${data}"/>`;
-            }
-            if (d.t === 'circle') {
-                const [cx, cy, r] = data.split(',');
-                return `<circle class="icon ${stateClass}" cx="${cx}" cy="${cy}" r="${r}"/>`;
-            }
-            if (d.t === 'line') {
-                const [x1, y1, x2, y2] = data.split(',');
-                return `<line class="icon ${stateClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-            }
-            if (d.t === 'rect') {
-                const [x, y, w, h, rx] = data.split(',');
-                return `<rect class="icon ${stateClass}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
-            }
-            if (d.t === 'lines') {
-                return data.split('|').map(p => {
-                    const [x1, y1, x2, y2] = p.split(',');
-                    return `<line class="icon ${stateClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-                }).join('');
-            }
-            if (d.t === 'circles') {
-                return data.split('|').map(p => {
-                    const [cx, cy, r] = p.split(',');
-                    return `<circle class="icon ${stateClass}" cx="${cx}" cy="${cy}" r="${r}"/>`;
-                }).join('');
-            }
-            if (d.t === 'points') {
-                return data.split('|').map(p => {
-                    const [cx, cy, r] = p.split(',');
-                    return `<circle class="point ${stateClass}" cx="${cx}" cy="${cy}" r="${r}"/>`;
-                }).join('');
-            }
-            return '';
-        }
-        
-        // ============================================
-        // DONNÉES : 24 dominos (chacun a 2 faces, rotation, position)
-        // ============================================
-        let dominos = [];
-        let dominoElements = [];
-        let ghostElements = [];
-        
-        function initDominos() {
-            dominos = [];
-            const rng = seededRandom(LEVEL_SEED);
-            
-            for (let cell = 0; cell < TOTAL_CELLS; cell++) {
-                const col = cell % COLS;
-                const row = Math.floor(cell / COLS);
-                
-                dominos.push({
-                    // Face du haut (dans le référentiel du domino)
-                    topIcon: LEVEL1_ICONS[Math.floor(rng() * LEVEL1_ICONS.length)],
-                    topState: 'white',
-                    // Face du bas (dans le référentiel du domino)
-                    bottomIcon: LEVEL1_ICONS[Math.floor(rng() * LEVEL1_ICONS.length)],
-                    bottomState: 'white',
-                    // Rotation cumulée (peut dépasser 360° ou être négative)
-                    rotation: 0,
-                    // Position dans la grille
-                    cellIndex: cell
-                });
-            }
-        }
-        
-        // ============================================
-        // HELPERS POSITION
-        // ============================================
-        
-        function getCellPosition(cellIndex) {
-            const col = cellIndex % COLS;
-            const row = Math.floor(cellIndex / COLS);
-            const x = col * CELL_TOTAL;
-            const y = row * CELL_TOTAL;
-            return { x, y, col, row };
-        }
-        
-        function getDominoByCell(cellIndex) {
-            return dominos.find(d => d.cellIndex === cellIndex);
-        }
-        
-        function getDominoIndexByCell(cellIndex) {
-            return dominos.findIndex(d => d.cellIndex === cellIndex);
-        }
-        
-        // ============================================
-        // CRÉATION ET MISE À JOUR VISUELLE
-        // ============================================
-        
-        function createDominoElement(domino, index) {
-            const el = document.createElement('div');
-            el.className = 'domino';
-            el.dataset.index = index;
-            
-            const pos = getCellPosition(domino.cellIndex);
-            el.style.width = CELL_SIZE + 'px';
-            el.style.height = CELL_SIZE + 'px';
-            el.style.left = pos.x + 'px';
-            el.style.top = pos.y + 'px';
-            el.style.transform = `rotate(${domino.rotation}deg)`;
-            
-            // Face du haut
-            const topFace = document.createElement('div');
-            const topEmpty = !domino.topIcon;
-            topFace.className = `face top ${domino.topState}${topEmpty ? ' empty' : ''}`;
-            topFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.topIcon, false, domino.topState)}</svg>`;
-            el.appendChild(topFace);
-            
-            // Face du bas
-            const bottomFace = document.createElement('div');
-            const bottomEmpty = !domino.bottomIcon;
-            bottomFace.className = `face bottom ${domino.bottomState}${bottomEmpty ? ' empty' : ''}`;
-            bottomFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.bottomIcon, true, domino.bottomState)}</svg>`;
-            el.appendChild(bottomFace);
-            
-            return el;
-        }
-        
-        function initialRender() {
-            grid.innerHTML = '';
-            dominoElements = [];
-            
-            for (let i = 0; i < dominos.length; i++) {
-                const el = createDominoElement(dominos[i], i);
-                grid.appendChild(el);
-                dominoElements.push(el);
-            }
-        }
-        
-        function updateDominoVisual(dominoIndex) {
-            const domino = dominos[dominoIndex];
-            const el = dominoElements[dominoIndex];
-            if (!el || !domino) return;
-            
-            const topFace = el.querySelector('.face.top');
-            const bottomFace = el.querySelector('.face.bottom');
-            
-            if (topFace) {
-                const topEmpty = !domino.topIcon;
-                topFace.className = `face top ${domino.topState}${topEmpty ? ' empty' : ''}`;
-                topFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.topIcon, false, domino.topState)}</svg>`;
+            let svgContent = sigle.svg.replace(/class="fill"/g, 'class="fill white"');
+            if (!sigle.onlyFill) {
+                svgContent = svgContent.replace(/<(path|rect|line|ellipse|circle)(?![^>]*class)/g, '<$1 class="stroke white"');
             }
             
-            if (bottomFace) {
-                const bottomEmpty = !domino.bottomIcon;
-                bottomFace.className = `face bottom ${domino.bottomState}${bottomEmpty ? ' empty' : ''}`;
-                bottomFace.innerHTML = `<svg viewBox="0 0 90 45">${renderIcon(domino.bottomIcon, true, domino.bottomState)}</svg>`;
-            }
-        }
-        
-        function updateDominoPosition(dominoIndex, animate = true) {
-            const domino = dominos[dominoIndex];
-            const el = dominoElements[dominoIndex];
-            if (!el || !domino) return;
+            box.innerHTML = `
+                <div class="square">
+                    <svg viewBox="0 0 100 100">
+                        <line class="cross" x1="50" y1="0" x2="50" y2="100"/>
+                        <line class="cross" x1="0" y1="50" x2="100" y2="50"/>
+                        <g class="icon-group">${svgContent}</g>
+                    </svg>
+                </div>
+                <span class="icon-name">${sigle.name}</span>
+            `;
             
-            const pos = getCellPosition(domino.cellIndex);
-            
-            el.style.transition = animate ? 'top 0.15s ease-out, left 0.15s ease-out' : 'none';
-            el.style.left = pos.x + 'px';
-            el.style.top = pos.y + 'px';
-        }
-        
-        function updateAllPositions(animate = true) {
-            for (let i = 0; i < dominos.length; i++) {
-                updateDominoPosition(i, animate);
-                updateDominoVisual(i);
-                // Réappliquer la rotation
-                const el = dominoElements[i];
-                if (el) {
-                    el.style.transform = `rotate(${dominos[i].rotation}deg)`;
-                }
-            }
-        }
-        
-        // ============================================
-        // ROTATION DOMINO (style v27)
-        // ============================================
-        
-        function rotateDomino(dominoIndex, clockwise = true) {
-            if (isAnimating) return;
-            
-            const domino = dominos[dominoIndex];
-            if (!domino) return;
-            
-            const el = dominoElements[dominoIndex];
-            if (!el) return;
-            
-            // Calculer la nouvelle rotation
-            const delta = clockwise ? 90 : -90;
-            domino.rotation += delta;
-            
-            // Animer la rotation
-            el.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-            el.style.transform = `rotate(${domino.rotation}deg)`;
-            
-            log(`Rotation ${clockwise ? 'horaire' : 'antihoraire'} → ${domino.rotation}°`);
-            
-            // Après animation, mettre à jour visuels et vérifier fusions
-            setTimeout(() => {
-                updateDominoVisual(dominoIndex);
-                checkFusions();
-            }, 300);
-        }
-        
-        // ============================================
-        // SYSTÈME DE FUSION (corridor entre dominos)
-        // ============================================
-        
-        // Obtenir la face exposée d'un domino dans une direction
-        // en tenant compte de sa rotation
-        function getExposedFace(domino, direction) {
-            if (!domino) return null;
-            
-            const r = ((domino.rotation % 360) + 360) % 360;
-            
-            // Mapping selon rotation et direction demandée
-            // À 0°: top=haut, bottom=bas
-            // À 90°: top=droite, bottom=gauche
-            // À 180°: top=bas, bottom=haut
-            // À 270°: top=gauche, bottom=droite
-            
-            const mapping = {
-                0:   { top: 'top', bottom: 'bottom', left: null, right: null },
-                90:  { top: null, bottom: null, left: 'bottom', right: 'top' },
-                180: { top: 'bottom', bottom: 'top', left: null, right: null },
-                270: { top: null, bottom: null, left: 'top', right: 'bottom' }
-            };
-            
-            const faceName = mapping[r]?.[direction];
-            if (!faceName) return null;
-            
-            return {
-                icon: domino[faceName + 'Icon'],
-                state: domino[faceName + 'State'],
-                faceName: faceName
-            };
-        }
-        
-        function getAdjacentPairs() {
-            const pairs = [];
-            
-            // Vérifier les paires verticales (bottom de row N vs top de row N+1)
-            for (let row = 0; row < ROWS - 1; row++) {
-                for (let col = 0; col < COLS; col++) {
-                    const topCellIndex = row * COLS + col;
-                    const bottomCellIndex = (row + 1) * COLS + col;
-                    
-                    const topDomino = getDominoByCell(topCellIndex);
-                    const bottomDomino = getDominoByCell(bottomCellIndex);
-                    
-                    if (topDomino && bottomDomino) {
-                        const topExposed = getExposedFace(topDomino, 'bottom');
-                        const bottomExposed = getExposedFace(bottomDomino, 'top');
-                        
-                        if (topExposed && bottomExposed && topExposed.icon && bottomExposed.icon) {
-                            pairs.push({
-                                domino1: topDomino,
-                                domino1Index: getDominoIndexByCell(topCellIndex),
-                                face1: topExposed,
-                                domino2: bottomDomino,
-                                domino2Index: getDominoIndexByCell(bottomCellIndex),
-                                face2: bottomExposed,
-                                direction: 'vertical'
-                            });
-                        }
-                    }
-                }
-            }
-            
-            // Vérifier les paires horizontales (right de col N vs left de col N+1)
-            for (let row = 0; row < ROWS; row++) {
-                for (let col = 0; col < COLS - 1; col++) {
-                    const leftCellIndex = row * COLS + col;
-                    const rightCellIndex = row * COLS + col + 1;
-                    
-                    const leftDomino = getDominoByCell(leftCellIndex);
-                    const rightDomino = getDominoByCell(rightCellIndex);
-                    
-                    if (leftDomino && rightDomino) {
-                        const leftExposed = getExposedFace(leftDomino, 'right');
-                        const rightExposed = getExposedFace(rightDomino, 'left');
-                        
-                        if (leftExposed && rightExposed && leftExposed.icon && rightExposed.icon) {
-                            pairs.push({
-                                domino1: leftDomino,
-                                domino1Index: getDominoIndexByCell(leftCellIndex),
-                                face1: leftExposed,
-                                domino2: rightDomino,
-                                domino2Index: getDominoIndexByCell(rightCellIndex),
-                                face2: rightExposed,
-                                direction: 'horizontal'
-                            });
-                        }
-                    }
-                }
-            }
-            
-            return pairs;
-        }
-        
-        function checkFusions() {
-            if (isAnimating) return;
-            
-            const pairs = getAdjacentPairs();
-            
-            for (const pair of pairs) {
-                // Les deux faces exposées doivent avoir la même icône
-                if (pair.face1.icon !== pair.face2.icon) continue;
-                
-                console.log(`FUSION: ${pair.face1.icon} (${pair.direction})`);
-                
-                performFusion(pair);
-                return;
-            }
-            
-            log('Prêt');
-        }
-        
-        function performFusion(pair) {
-            isAnimating = true;
-            
-            const el1 = dominoElements[pair.domino1Index];
-            const el2 = dominoElements[pair.domino2Index];
-            
-            el1.classList.add('fusion-tilt');
-            el2.classList.add('fusion-receive');
-            
-            setTimeout(() => {
-                // Le receveur (domino2) monte en état
-                const currentStateIdx = STATE_ORDER.indexOf(pair.face2.state);
-                const percuteurStateIdx = STATE_ORDER.indexOf(pair.face1.state);
-                const newStateIdx = Math.min(currentStateIdx + percuteurStateIdx + 1, STATE_ORDER.length - 1);
-                
-                // Mettre à jour la face du receveur
-                pair.domino2[pair.face2.faceName + 'State'] = STATE_ORDER[newStateIdx];
-                
-                // Le percuteur perd son icône
-                pair.domino1[pair.face1.faceName + 'Icon'] = null;
-                pair.domino1[pair.face1.faceName + 'State'] = 'white';
-                
-                // Mettre à jour les visuels
-                updateDominoVisual(pair.domino1Index);
-                updateDominoVisual(pair.domino2Index);
-                
-                el1.classList.remove('fusion-tilt');
-                el2.classList.remove('fusion-receive');
-                
-                isAnimating = false;
-                
-                setTimeout(() => {
-                    checkFusions();
-                }, 100);
-            }, 400);
-        }
-        
-        // ============================================
-        // GHOSTS POUR WRAP-AROUND
-        // ============================================
-        
-        function createGhostsForColumn(col) {
-            clearGhosts();
-            
-            for (let row = 0; row < ROWS; row++) {
-                const cellIndex = row * COLS + col;
-                const dominoIndex = getDominoIndexByCell(cellIndex);
-                if (dominoIndex < 0) continue;
-                
-                const domino = dominos[dominoIndex];
-                const pos = getCellPosition(cellIndex);
-                
-                // Ghost en haut
-                const ghostTop = createDominoElement(domino, dominoIndex);
-                ghostTop.classList.add('ghost');
-                ghostTop.style.top = (pos.y - GRID_HEIGHT) + 'px';
-                grid.appendChild(ghostTop);
-                ghostElements.push({ el: ghostTop, baseY: pos.y - GRID_HEIGHT, dominoIndex });
-                
-                // Ghost en bas
-                const ghostBottom = createDominoElement(domino, dominoIndex);
-                ghostBottom.classList.add('ghost');
-                ghostBottom.style.top = (pos.y + GRID_HEIGHT) + 'px';
-                grid.appendChild(ghostBottom);
-                ghostElements.push({ el: ghostBottom, baseY: pos.y + GRID_HEIGHT, dominoIndex });
-            }
-        }
-        
-        function createGhostsForRow(row) {
-            clearGhosts();
-            
-            for (let col = 0; col < COLS; col++) {
-                const cellIndex = row * COLS + col;
-                const dominoIndex = getDominoIndexByCell(cellIndex);
-                if (dominoIndex < 0) continue;
-                
-                const domino = dominos[dominoIndex];
-                const pos = getCellPosition(cellIndex);
-                
-                // Ghost à gauche
-                const ghostLeft = createDominoElement(domino, dominoIndex);
-                ghostLeft.classList.add('ghost');
-                ghostLeft.style.left = (pos.x - GRID_WIDTH) + 'px';
-                grid.appendChild(ghostLeft);
-                ghostElements.push({ el: ghostLeft, baseX: pos.x - GRID_WIDTH, dominoIndex });
-                
-                // Ghost à droite
-                const ghostRight = createDominoElement(domino, dominoIndex);
-                ghostRight.classList.add('ghost');
-                ghostRight.style.left = (pos.x + GRID_WIDTH) + 'px';
-                grid.appendChild(ghostRight);
-                ghostElements.push({ el: ghostRight, baseX: pos.x + GRID_WIDTH, dominoIndex });
-            }
-        }
-        
-        function clearGhosts() {
-            ghostElements.forEach(g => g.el.remove());
-            ghostElements = [];
-        }
-        
-        // ============================================
-        // DRAG STATE
-        // ============================================
-        
-        let isDragging = false;
-        let dragAxis = null;
-        let dragCol = -1;
-        let dragRow = -1;
-        let dragStartX = 0;
-        let dragStartY = 0;
-        let dragOffset = 0;
-        let initialPositions = [];
-        
-        // ============================================
-        // DRAG VERTICAL
-        // ============================================
-        
-        function startVerticalDrag(col) {
-            if (isAnimating) return;
-            
-            dragAxis = 'vertical';
-            dragCol = col;
-            initialPositions = [];
-            
-            for (let row = 0; row < ROWS; row++) {
-                const cellIndex = row * COLS + col;
-                const dominoIndex = getDominoIndexByCell(cellIndex);
-                if (dominoIndex < 0) continue;
-                
-                const pos = getCellPosition(cellIndex);
-                initialPositions.push({
-                    dominoIndex,
-                    baseY: pos.y,
-                    originalRow: row
-                });
-            }
-            
-            createGhostsForColumn(col);
-        }
-        
-        function endVerticalDrag(steps) {
-            // Animer vers position finale
-            for (const item of initialPositions) {
-                const el = dominoElements[item.dominoIndex];
-                const newRow = ((item.originalRow + steps) % ROWS + ROWS) % ROWS;
-                const targetY = newRow * CELL_TOTAL;
-                
-                let currentY = item.baseY + dragOffset;
-                while (currentY - targetY > GRID_HEIGHT / 2) currentY -= GRID_HEIGHT;
-                while (targetY - currentY > GRID_HEIGHT / 2) currentY += GRID_HEIGHT;
-                
-                el.style.transition = 'none';
-                el.style.top = currentY + 'px';
-            }
-            
-            grid.offsetHeight;
-            
-            for (const item of initialPositions) {
-                const el = dominoElements[item.dominoIndex];
-                const newRow = ((item.originalRow + steps) % ROWS + ROWS) % ROWS;
-                const targetY = newRow * CELL_TOTAL;
-                
-                el.style.transition = 'top 0.15s ease-out';
-                el.style.top = targetY + 'px';
-            }
-            
-            // Mettre à jour les cellIndex
-            const colDominos = initialPositions.map(item => ({
-                dominoIndex: item.dominoIndex,
-                newRow: ((item.originalRow + steps) % ROWS + ROWS) % ROWS
-            }));
-            
-            for (const item of colDominos) {
-                dominos[item.dominoIndex].cellIndex = item.newRow * COLS + dragCol;
-            }
-            
-            setTimeout(() => {
-                clearGhosts();
-                updateAllPositions(false);
-                
-                if (steps !== 0) {
-                    log(`Drag vertical col ${dragCol}, ${steps} steps`);
-                    checkFusions();
-                } else {
-                    log('Prêt');
-                }
-            }, 200);
-        }
-        
-        // ============================================
-        // DRAG HORIZONTAL
-        // ============================================
-        
-        function startHorizontalDrag(row) {
-            if (isAnimating) return;
-            
-            dragAxis = 'horizontal';
-            dragRow = row;
-            initialPositions = [];
-            
-            for (let col = 0; col < COLS; col++) {
-                const cellIndex = row * COLS + col;
-                const dominoIndex = getDominoIndexByCell(cellIndex);
-                if (dominoIndex < 0) continue;
-                
-                const pos = getCellPosition(cellIndex);
-                initialPositions.push({
-                    dominoIndex,
-                    baseX: pos.x,
-                    originalCol: col
-                });
-            }
-            
-            createGhostsForRow(row);
-        }
-        
-        function endHorizontalDrag(steps) {
-            for (const item of initialPositions) {
-                const el = dominoElements[item.dominoIndex];
-                const newCol = ((item.originalCol + steps) % COLS + COLS) % COLS;
-                const targetX = newCol * CELL_TOTAL;
-                
-                let currentX = item.baseX + dragOffset;
-                while (currentX - targetX > GRID_WIDTH / 2) currentX -= GRID_WIDTH;
-                while (targetX - currentX > GRID_WIDTH / 2) currentX += GRID_WIDTH;
-                
-                el.style.transition = 'none';
-                el.style.left = currentX + 'px';
-            }
-            
-            grid.offsetHeight;
-            
-            for (const item of initialPositions) {
-                const el = dominoElements[item.dominoIndex];
-                const newCol = ((item.originalCol + steps) % COLS + COLS) % COLS;
-                const targetX = newCol * CELL_TOTAL;
-                
-                el.style.transition = 'left 0.15s ease-out';
-                el.style.left = targetX + 'px';
-            }
-            
-            // Mettre à jour les cellIndex
-            const rowDominos = initialPositions.map(item => ({
-                dominoIndex: item.dominoIndex,
-                newCol: ((item.originalCol + steps) % COLS + COLS) % COLS
-            }));
-            
-            for (const item of rowDominos) {
-                dominos[item.dominoIndex].cellIndex = dragRow * COLS + item.newCol;
-            }
-            
-            setTimeout(() => {
-                clearGhosts();
-                updateAllPositions(false);
-                
-                if (steps !== 0) {
-                    log(`Drag horizontal row ${dragRow}, ${steps} steps`);
-                    checkFusions();
-                } else {
-                    log('Prêt');
-                }
-            }, 200);
-        }
-        
-        // ============================================
-        // DRAG MOVE & END
-        // ============================================
-        
-        function moveDrag(e) {
-            if (!isDragging || !dragAxis) return;
-            
-            if (dragAxis === 'vertical') {
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                dragOffset = clientY - dragStartY;
-                
-                for (const item of initialPositions) {
-                    const el = dominoElements[item.dominoIndex];
-                    el.style.transition = 'none';
-                    el.style.top = (item.baseY + dragOffset) + 'px';
-                }
-                
-                for (const ghost of ghostElements) {
-                    ghost.el.style.transition = 'none';
-                    ghost.el.style.top = (ghost.baseY + dragOffset) + 'px';
-                }
-            } else if (dragAxis === 'horizontal') {
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                dragOffset = clientX - dragStartX;
-                
-                for (const item of initialPositions) {
-                    const el = dominoElements[item.dominoIndex];
-                    el.style.transition = 'none';
-                    el.style.left = (item.baseX + dragOffset) + 'px';
-                }
-                
-                for (const ghost of ghostElements) {
-                    ghost.el.style.transition = 'none';
-                    ghost.el.style.left = (ghost.baseX + dragOffset) + 'px';
-                }
-            }
-        }
-        
-        function endDrag() {
-            if (!isDragging) return;
-            
-            if (dragAxis === 'vertical') {
-                const steps = Math.round(dragOffset / CELL_TOTAL);
-                endVerticalDrag(steps);
-            } else if (dragAxis === 'horizontal') {
-                const steps = Math.round(dragOffset / CELL_TOTAL);
-                endHorizontalDrag(steps);
-            } else {
-                clearGhosts();
-            }
-            
-            isDragging = false;
-            dragAxis = null;
-            dragCol = -1;
-            dragRow = -1;
-            initialPositions = [];
-        }
-        
-        // ============================================
-        // EVENT LISTENERS
-        // ============================================
-        
-        grid.addEventListener('mousedown', handleStart);
-        grid.addEventListener('touchstart', handleStart, { passive: false });
-        document.addEventListener('mousemove', handleMove);
-        document.addEventListener('touchmove', handleMove, { passive: false });
-        document.addEventListener('mouseup', handleEnd);
-        document.addEventListener('touchend', handleEnd);
-        
-        let clickedDominoIndex = null;
-        let clickStartTime = 0;
-        let clickLocalX = 0;
-        
-        function handleStart(e) {
-            if (isAnimating) return;
-            
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            const dominoEl = e.target.closest('.domino');
-            if (dominoEl && !dominoEl.classList.contains('ghost')) {
-                e.preventDefault();
-                
-                clickedDominoIndex = parseInt(dominoEl.dataset.index);
-                clickStartTime = Date.now();
-                
-                // Position locale X dans le domino
-                const rect = dominoEl.getBoundingClientRect();
-                clickLocalX = clientX - rect.left;
-                
-                const domino = dominos[clickedDominoIndex];
-                const pos = getCellPosition(domino.cellIndex);
-                dragRow = pos.row;
-                dragCol = pos.col;
-                
-                isDragging = true;
-                dragAxis = null;
-                dragStartX = clientX;
-                dragStartY = clientY;
-                dragOffset = 0;
-            }
-        }
-        
-        function handleMove(e) {
-            if (!isDragging || isAnimating) return;
-            
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            const deltaX = clientX - dragStartX;
-            const deltaY = clientY - dragStartY;
-            
-            if (dragAxis === null) {
-                const threshold = 8;
-                if (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold) {
-                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        startHorizontalDrag(dragRow);
-                    } else {
-                        startVerticalDrag(dragCol);
-                    }
-                }
-            }
-            
-            if (dragAxis) {
-                moveDrag(e);
-            }
-        }
-        
-        function handleEnd(e) {
-            if (!isDragging) return;
-            
-            const elapsed = Date.now() - clickStartTime;
-            const distance = Math.abs(dragOffset);
-            
-            // Tap = rotation
-            if (dragAxis === null && distance < 8 && elapsed < 250 && clickedDominoIndex !== null) {
-                // Sens selon position du tap (gauche = antihoraire, droite = horaire)
-                const clockwise = clickLocalX > (CELL_SIZE / 2);
-                rotateDomino(clickedDominoIndex, clockwise);
-                
-                isDragging = false;
-                clickedDominoIndex = null;
-                return;
-            }
-            
-            endDrag();
-            clickedDominoIndex = null;
-        }
-        
-        // ============================================
-        // INIT
-        // ============================================
-        
-        function init() {
-            updateDimensions();
-            initDominos();
-            initialRender();
-            log('ADAM V4 - Rotation Domino prêt');
-            
-            setTimeout(checkFusions, 100);
-        }
-        
-        if (document.readyState === 'complete') {
-            init();
-        } else {
-            window.addEventListener('load', init);
-        }
-        
-        window.addEventListener('resize', () => {
-            updateDimensions();
-            updateAllPositions(false);
+            box.querySelector('.square').addEventListener('click', () => cycleState(box));
+            grid.appendChild(box);
         });
+        
+        function cycleState(box) {
+            let idx = parseInt(box.dataset.state);
+            idx = (idx + 1) % STATES.length;
+            box.dataset.state = idx;
+            
+            const state = STATES[idx];
+            const square = box.querySelector('.square');
+            const elements = box.querySelectorAll('.icon-group .stroke, .icon-group .fill');
+            
+            square.classList.remove(...STATES);
+            if (state !== 'white') square.classList.add(state);
+            
+            elements.forEach(el => {
+                el.classList.remove(...STATES);
+                el.classList.add(state);
+            });
+        }
     </script>
 </body>
 </html>
