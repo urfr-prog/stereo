@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ADAM - Domino Matrix v2</title>
+    <title>ADAM - Domino Matrix v3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -32,79 +32,142 @@
         .domino svg {
             width: 100%;
             height: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* === COULEUR UNIQUE : Silver Ice === */
+        :root {
+            --ice: #7ec8e3;
+            --ice50: rgba(126,200,227,0.5);
+            --ice40: rgba(126,200,227,0.4);
+            --ice30: rgba(126,200,227,0.3);
+            --ice20: rgba(126,200,227,0.2);
+            --ice12: rgba(126,200,227,0.12);
+            --ice06: rgba(126,200,227,0.06);
+            --ice03: rgba(126,200,227,0.03);
+        }
+        svg .sep { stroke: var(--ice30); stroke-width: 0.8; }
+        svg .ic { stroke: var(--ice); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px var(--ice50)); }
+        svg .pt { fill: var(--ice); filter: drop-shadow(0 0 4px var(--ice50)); }
+        svg .ring { fill: none; stroke: var(--ice); stroke-width: 1.5; filter: drop-shadow(0 0 3px var(--ice40)); }
+
+        /* ============================================
+           STYLE A - Classic (comme flip 3D back)
+           Fond pur, bordure ice, halo subtil
+           ============================================ */
+        .style-a {
+            background: #12131a;
+            border: 1px solid var(--ice50);
+            box-shadow: 0 0 18px var(--ice12), inset 0 0 30px var(--ice03);
         }
 
         /* ============================================
-           PALETTE PRÉCIEUSE - 6 ambiances
+           STYLE B - Deep Void
+           Fond plus noir, bordure fine, halo fort au sol
            ============================================ */
-
-        /* 1 - Silver Ice (comme le flip 3D back) */
-        .silver {
-            border: 1px solid rgba(126,200,227,0.5);
-            box-shadow: 0 0 18px rgba(126,200,227,0.12), inset 0 0 30px rgba(126,200,227,0.03);
+        .style-b {
+            background: #0a0a0f;
+            border: 1px solid var(--ice30);
+            box-shadow: 0 4px 25px var(--ice20), 0 0 8px var(--ice06);
         }
-        .silver .sep { stroke: rgba(126,200,227,0.3); stroke-width: 0.8; }
-        .silver .ic { stroke: #7ec8e3; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px rgba(126,200,227,0.5)); }
-        .silver .pt { fill: #7ec8e3; filter: drop-shadow(0 0 4px rgba(126,200,227,0.5)); }
-        .silver .ring { fill: none; stroke: #7ec8e3; stroke-width: 1.5; filter: drop-shadow(0 0 3px rgba(126,200,227,0.4)); }
 
-        /* 2 - Rose Quartz */
-        .rose {
-            border: 1px solid rgba(220,160,180,0.45);
-            box-shadow: 0 0 18px rgba(220,160,180,0.1), inset 0 0 30px rgba(220,160,180,0.03);
+        /* ============================================
+           STYLE C - Inner Glow
+           Fond légèrement éclairé de l'intérieur
+           ============================================ */
+        .style-c {
+            background: radial-gradient(ellipse at 50% 40%, rgba(126,200,227,0.06) 0%, #0e0f15 70%);
+            border: 1px solid var(--ice40);
+            box-shadow: 0 0 14px var(--ice06);
         }
-        .rose .sep { stroke: rgba(220,160,180,0.25); stroke-width: 0.8; }
-        .rose .ic { stroke: rgba(220,170,185,0.75); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px rgba(220,160,180,0.4)); }
-        .rose .pt { fill: rgba(220,170,185,0.75); filter: drop-shadow(0 0 4px rgba(220,160,180,0.4)); }
-        .rose .ring { fill: none; stroke: rgba(220,170,185,0.65); stroke-width: 1.5; filter: drop-shadow(0 0 3px rgba(220,160,180,0.35)); }
 
-        /* 3 - Amethyst */
-        .amethyst {
-            border: 1px solid rgba(170,150,220,0.45);
-            box-shadow: 0 0 18px rgba(170,150,220,0.1), inset 0 0 30px rgba(170,150,220,0.03);
+        /* ============================================
+           STYLE D - Frosted Glass
+           Bordure plus épaisse, fond brumeux
+           ============================================ */
+        .style-d {
+            background: linear-gradient(145deg, rgba(126,200,227,0.04) 0%, rgba(12,13,20,1) 50%, rgba(126,200,227,0.02) 100%);
+            border: 1.5px solid var(--ice30);
+            box-shadow: inset 0 1px 0 rgba(126,200,227,0.12), 0 0 12px var(--ice06);
         }
-        .amethyst .sep { stroke: rgba(170,150,220,0.25); stroke-width: 0.8; }
-        .amethyst .ic { stroke: rgba(180,160,225,0.75); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px rgba(170,150,220,0.45)); }
-        .amethyst .pt { fill: rgba(180,160,225,0.75); filter: drop-shadow(0 0 4px rgba(170,150,220,0.45)); }
-        .amethyst .ring { fill: none; stroke: rgba(180,160,225,0.65); stroke-width: 1.5; filter: drop-shadow(0 0 3px rgba(170,150,220,0.35)); }
 
-        /* 4 - Jade */
-        .jade {
-            border: 1px solid rgba(130,200,170,0.45);
-            box-shadow: 0 0 18px rgba(130,200,170,0.1), inset 0 0 30px rgba(130,200,170,0.03);
+        /* ============================================
+           STYLE E - Embossed
+           Relief en creux, ombre intérieure forte
+           ============================================ */
+        .style-e {
+            background: #0d0e14;
+            border: 1px solid rgba(126,200,227,0.2);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.8), inset 0 -1px 4px rgba(126,200,227,0.08), 0 1px 2px rgba(126,200,227,0.06);
         }
-        .jade .sep { stroke: rgba(130,200,170,0.25); stroke-width: 0.8; }
-        .jade .ic { stroke: rgba(140,210,180,0.7); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px rgba(130,200,170,0.45)); }
-        .jade .pt { fill: rgba(140,210,180,0.7); filter: drop-shadow(0 0 4px rgba(130,200,170,0.45)); }
-        .jade .ring { fill: none; stroke: rgba(140,210,180,0.6); stroke-width: 1.5; filter: drop-shadow(0 0 3px rgba(130,200,170,0.35)); }
 
-        /* 5 - Gold Pale */
-        .gold {
-            border: 1px solid rgba(220,200,140,0.4);
-            box-shadow: 0 0 18px rgba(220,200,140,0.1), inset 0 0 30px rgba(220,200,140,0.03);
+        /* ============================================
+           STYLE F - Double Border
+           Double cadre, premier très fin externe
+           ============================================ */
+        .style-f {
+            background: #10111a;
+            border: 1px solid var(--ice40);
+            outline: 1px solid rgba(126,200,227,0.12);
+            outline-offset: 3px;
+            box-shadow: 0 0 20px var(--ice06);
         }
-        .gold .sep { stroke: rgba(220,200,140,0.25); stroke-width: 0.8; }
-        .gold .ic { stroke: rgba(225,205,150,0.7); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px rgba(220,200,140,0.4)); }
-        .gold .pt { fill: rgba(225,205,150,0.7); filter: drop-shadow(0 0 4px rgba(220,200,140,0.4)); }
-        .gold .ring { fill: none; stroke: rgba(225,205,150,0.6); stroke-width: 1.5; filter: drop-shadow(0 0 3px rgba(220,200,140,0.35)); }
+        .style-f { border-radius: 16px; }
 
-        /* 6 - Pearl (blanc nacré) */
-        .pearl {
-            border: 1px solid rgba(210,215,225,0.35);
-            box-shadow: 0 0 18px rgba(210,215,225,0.08), inset 0 0 30px rgba(210,215,225,0.03);
+        /* ============================================
+           STYLE G - Bottom Halo
+           Halo concentré en bas comme une flamme froide
+           ============================================ */
+        .style-g {
+            background: #12131a;
+            border: 1px solid var(--ice30);
+            box-shadow: 0 8px 30px rgba(126,200,227,0.18), 0 2px 10px rgba(126,200,227,0.08);
         }
-        .pearl .sep { stroke: rgba(210,215,225,0.2); stroke-width: 0.8; }
-        .pearl .ic { stroke: rgba(215,220,230,0.55); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 3px rgba(210,215,225,0.3)); }
-        .pearl .pt { fill: rgba(215,220,230,0.55); filter: drop-shadow(0 0 3px rgba(210,215,225,0.3)); }
-        .pearl .ring { fill: none; stroke: rgba(215,220,230,0.45); stroke-width: 1.5; filter: drop-shadow(0 0 2px rgba(210,215,225,0.25)); }
+
+        /* ============================================
+           STYLE H - Gradient Border Feel
+           Fond avec gradient subtil haut→bas
+           ============================================ */
+        .style-h {
+            background: linear-gradient(180deg, rgba(126,200,227,0.05) 0%, #0a0a10 40%, #0a0a10 100%);
+            border: 1px solid var(--ice40);
+            box-shadow: 0 0 10px var(--ice06), inset 0 0 20px var(--ice03);
+        }
+
+        /* ============================================
+           STYLE I - Gem Cut (facette brillante)
+           Highlight diagonal + fond très sombre
+           ============================================ */
+        .style-i {
+            background: linear-gradient(135deg, rgba(126,200,227,0.07) 0%, transparent 30%, transparent 70%, rgba(126,200,227,0.03) 100%);
+            border: 1px solid var(--ice40);
+            box-shadow: 0 0 15px var(--ice06);
+        }
+        .style-i::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 50%; bottom: 50%;
+            background: linear-gradient(135deg, rgba(126,200,227,0.06) 0%, transparent 100%);
+            border-radius: 16px 0 0 0;
+            z-index: 1;
+        }
+
+        /* Icônes avec relief plus prononcé sur certains styles */
+        .style-e svg .ic { filter: drop-shadow(0 0 3px var(--ice40)) drop-shadow(0 2px 1px rgba(0,0,0,0.5)); }
+        .style-e svg .pt { filter: drop-shadow(0 0 3px var(--ice40)) drop-shadow(0 2px 1px rgba(0,0,0,0.5)); }
+
+        /* Icônes plus lumineuses sur fond très sombre */
+        .style-b svg .ic { filter: drop-shadow(0 0 6px var(--ice50)) drop-shadow(0 0 12px var(--ice20)); }
+        .style-b svg .pt { filter: drop-shadow(0 0 6px var(--ice50)) drop-shadow(0 0 12px var(--ice20)); }
     </style>
 </head>
 <body>
 
 <div class="grid">
 
-    <!-- R1C1 : SILVER - Lune croissant / 1 point -->
-    <div class="domino silver">
+    <!-- R1C1 : STYLE A - Lune croissant / 1 -->
+    <div class="domino style-a">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 50 12 A 16 16 0 1 0 50 38 A 11 11 0 1 1 50 12"/>
@@ -112,24 +175,19 @@
         </svg>
     </div>
 
-    <!-- R1C2 : ROSE - Fleur 6 pétales / 2 points -->
-    <div class="domino rose">
+    <!-- R1C2 : STYLE B - Onde double / 2 -->
+    <div class="domino style-b">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
-            <circle class="ring" cx="45" cy="25" r="3"/>
-            <circle class="ring" cx="53" cy="20" r="3"/>
-            <circle class="ring" cx="53" cy="30" r="3"/>
-            <circle class="ring" cx="45" cy="35" r="3"/>
-            <circle class="ring" cx="37" cy="30" r="3"/>
-            <circle class="ring" cx="37" cy="20" r="3"/>
-            <circle class="pt" cx="45" cy="27.5" r="2"/>
+            <path class="ic" d="M 15 20 Q 30 10 45 20 Q 60 30 75 20"/>
+            <path class="ic" d="M 15 32 Q 30 22 45 32 Q 60 42 75 32"/>
             <circle class="pt" cx="35" cy="67" r="3.5"/>
             <circle class="pt" cx="55" cy="67" r="3.5"/>
         </svg>
     </div>
 
-    <!-- R1C3 : AMETHYST - Oeil / 3 points -->
-    <div class="domino amethyst">
+    <!-- R1C3 : STYLE C - Oeil / 3 -->
+    <div class="domino style-c">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 15 25 Q 45 8 75 25 Q 45 42 15 25"/>
@@ -140,8 +198,8 @@
         </svg>
     </div>
 
-    <!-- R2C1 : JADE - Feuille / 2 anneaux -->
-    <div class="domino jade">
+    <!-- R2C1 : STYLE D - Feuille / 2 anneaux -->
+    <div class="domino style-d">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 25 36 Q 25 10 55 10 Q 35 22 35 36"/>
@@ -152,8 +210,8 @@
         </svg>
     </div>
 
-    <!-- R2C2 : GOLD - Soleil rayons / 4 points -->
-    <div class="domino gold">
+    <!-- R2C2 : STYLE E - Soleil / 4 -->
+    <div class="domino style-e">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <circle class="ring" cx="45" cy="25" r="7"/>
@@ -172,8 +230,8 @@
         </svg>
     </div>
 
-    <!-- R2C3 : PEARL - Goutte / 1 anneau -->
-    <div class="domino pearl">
+    <!-- R2C3 : STYLE F - Goutte / 1 anneau -->
+    <div class="domino style-f">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 45 10 Q 30 28 30 32 A 15 15 0 0 0 60 32 Q 60 28 45 10"/>
@@ -181,30 +239,8 @@
         </svg>
     </div>
 
-    <!-- R3C1 : SILVER - Vagues superposées / 2 points -->
-    <div class="domino silver">
-        <svg viewBox="0 0 90 90">
-            <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
-            <path class="ic" d="M 15 20 Q 30 10 45 20 Q 60 30 75 20"/>
-            <path class="ic" d="M 15 32 Q 30 22 45 32 Q 60 42 75 32"/>
-            <circle class="pt" cx="35" cy="67" r="3.5"/>
-            <circle class="pt" cx="55" cy="67" r="3.5"/>
-        </svg>
-    </div>
-
-    <!-- R3C2 : AMETHYST - Sablier / 3 anneaux -->
-    <div class="domino amethyst">
-        <svg viewBox="0 0 90 90">
-            <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
-            <path class="ic" d="M 30 10 L 60 10 L 45 28 L 60 42 L 30 42 L 45 28 Z"/>
-            <circle class="ring" cx="45" cy="57" r="4.5"/>
-            <circle class="ring" cx="33" cy="75" r="4.5"/>
-            <circle class="ring" cx="57" cy="75" r="4.5"/>
-        </svg>
-    </div>
-
-    <!-- R3C3 : ROSE - Papillon / 1 point -->
-    <div class="domino rose">
+    <!-- R3C1 : STYLE G - Papillon / 1 -->
+    <div class="domino style-g">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 45 18 Q 28 10 22 22 Q 18 34 45 32"/>
@@ -215,8 +251,32 @@
         </svg>
     </div>
 
-    <!-- R4C1 : GOLD - Couronne / 2 points diag -->
-    <div class="domino gold">
+    <!-- R3C2 : STYLE H - Sablier / 3 anneaux -->
+    <div class="domino style-h">
+        <svg viewBox="0 0 90 90">
+            <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
+            <path class="ic" d="M 30 10 L 60 10 L 45 28 L 60 42 L 30 42 L 45 28 Z"/>
+            <circle class="ring" cx="45" cy="57" r="4.5"/>
+            <circle class="ring" cx="33" cy="75" r="4.5"/>
+            <circle class="ring" cx="57" cy="75" r="4.5"/>
+        </svg>
+    </div>
+
+    <!-- R3C3 : STYLE I - Cristal / 2 -->
+    <div class="domino style-i">
+        <svg viewBox="0 0 90 90">
+            <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
+            <path class="ic" d="M 35 10 L 55 10 L 65 22 L 45 40 L 25 22 Z"/>
+            <line class="ic" x1="45" y1="10" x2="45" y2="40"/>
+            <line class="ic" x1="35" y1="10" x2="45" y2="22"/>
+            <line class="ic" x1="55" y1="10" x2="45" y2="22"/>
+            <circle class="pt" cx="35" cy="67" r="3.5"/>
+            <circle class="pt" cx="55" cy="67" r="3.5"/>
+        </svg>
+    </div>
+
+    <!-- R4C1 : STYLE C - Couronne / 2 diag -->
+    <div class="domino style-c">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 22 36 L 22 14 L 34 24 L 45 10 L 56 24 L 68 14 L 68 36"/>
@@ -226,8 +286,8 @@
         </svg>
     </div>
 
-    <!-- R4C2 : JADE - Yin-yang simplifié / 3 points -->
-    <div class="domino jade">
+    <!-- R4C2 : STYLE G - Yin-yang / 3 -->
+    <div class="domino style-g">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <circle class="ring" cx="45" cy="25" r="14"/>
@@ -240,8 +300,8 @@
         </svg>
     </div>
 
-    <!-- R4C3 : SILVER - Étoile filante / 2 anneaux -->
-    <div class="domino silver">
+    <!-- R4C3 : STYLE E - Étoile filante / 2 anneaux -->
+    <div class="domino style-e">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 60 12 L 55 22 L 65 22 Z"/>
@@ -253,34 +313,33 @@
         </svg>
     </div>
 
-    <!-- R5C1 : AMETHYST - Cristal / 4 points -->
-    <div class="domino amethyst">
+    <!-- R5C1 : STYLE D - Fleur / 2 -->
+    <div class="domino style-d">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
-            <path class="ic" d="M 35 10 L 55 10 L 65 22 L 45 40 L 25 22 Z"/>
-            <line class="ic" x1="45" y1="10" x2="45" y2="40"/>
-            <line class="ic" x1="35" y1="10" x2="45" y2="22"/>
-            <line class="ic" x1="55" y1="10" x2="45" y2="22"/>
-            <circle class="pt" cx="33" cy="57" r="3"/>
-            <circle class="pt" cx="57" cy="57" r="3"/>
-            <circle class="pt" cx="33" cy="77" r="3"/>
-            <circle class="pt" cx="57" cy="77" r="3"/>
+            <circle class="ring" cx="45" cy="25" r="3"/>
+            <circle class="ring" cx="53" cy="20" r="3"/>
+            <circle class="ring" cx="53" cy="30" r="3"/>
+            <circle class="ring" cx="45" cy="35" r="3"/>
+            <circle class="ring" cx="37" cy="30" r="3"/>
+            <circle class="ring" cx="37" cy="20" r="3"/>
+            <circle class="pt" cx="45" cy="27.5" r="2"/>
+            <circle class="pt" cx="35" cy="67" r="3.5"/>
+            <circle class="pt" cx="55" cy="67" r="3.5"/>
         </svg>
     </div>
 
-    <!-- R5C2 : ROSE - Coquillage / 1 anneau -->
-    <div class="domino rose">
+    <!-- R5C2 : STYLE I - Infinity / 1 anneau -->
+    <div class="domino style-i">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
-            <path class="ic" d="M 45 38 A 14 14 0 0 1 31 24 Q 35 10 45 12 Q 55 10 59 24 A 14 14 0 0 1 45 38"/>
-            <path class="ic" d="M 38 30 Q 42 18 52 28"/>
-            <path class="ic" d="M 40 34 Q 44 24 54 32" opacity="0.5"/>
+            <path class="ic" d="M 45 25 C 30 10 12 18 18 28 C 24 38 40 34 45 25 C 50 16 66 12 72 22 C 78 32 60 40 45 25"/>
             <circle class="ring" cx="45" cy="67" r="6"/>
         </svg>
     </div>
 
-    <!-- R5C3 : GOLD - Plume / 2 points -->
-    <div class="domino gold">
+    <!-- R5C3 : STYLE A - Plume / 2 -->
+    <div class="domino style-a">
         <svg viewBox="0 0 90 90">
             <line class="sep" x1="0" y1="45" x2="90" y2="45"/>
             <path class="ic" d="M 45 40 Q 35 30 38 18 Q 40 10 50 12 Q 58 14 55 24 Q 52 32 45 40"/>
