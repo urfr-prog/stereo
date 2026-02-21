@@ -3,199 +3,941 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM 3D — v5</title>
+    <title>ADAM 3D</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --cell: min(80px, 20vw);
+            --gap: 0px;
+        }
         html, body { height: 100%; overflow: hidden; touch-action: none; }
         body {
-            background-color: #0c0d14; min-height: 100vh;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            user-select: none; -webkit-user-select: none;
+            background-color: #0c0d14;
+            min-height: 100vh;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-        .logo { display: flex; align-items: center; gap: 4px; }
-        .logo-icon { width: 28px; height: 28px; }
+
+        .logo { display: flex; align-items: center; gap: 4px; height: 40px; margin-top: -30px; cursor: pointer; }
+        .logo-icon { width: 36px; height: 36px; }
         .logo-icon svg { width: 100%; height: 100%; }
-        .logo-icon svg path,.logo-icon svg line,.logo-icon svg polygon,.logo-icon svg rect {
-            stroke: rgba(240,240,250,0.8); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none;
-            filter: drop-shadow(0 0 6px rgba(240,240,250,0.4));
+        .logo-icon svg path, .logo-icon svg line, .logo-icon svg rect, .logo-icon svg polygon {
+            stroke: rgba(240, 240, 250, 0.9); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none;
+            filter: drop-shadow(0 0 8px rgba(240, 240, 250, 0.4));
         }
-        .score-bar { display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(126,200,227,0.15); border-radius: 12px; padding: 6px 16px; }
-        .si { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-        .sl { font-size: 0.52rem; color: rgba(126,200,227,0.45); text-transform: uppercase; letter-spacing: 0.1em; }
-        .sv { font-size: 0.95rem; color: rgba(220,220,235,0.9); font-weight: 500; font-variant-numeric: tabular-nums; }
-        .sv.combo { color: #34d399 !important; }
-        @keyframes flash { 0%{color:#ffd700;transform:scale(1.3)} 100%{color:rgba(220,220,235,0.9);transform:scale(1)} }
-        .flash { animation: flash 0.5s ease-out; }
-        .grid { display: grid; grid-template-columns: repeat(4,90px); grid-template-rows: repeat(4,90px); gap: 6px; }
-        .scene { width: 90px; height: 90px; perspective: 500px; position: relative; }
-        .cube { width: 72px; height: 72px; position: absolute; top: 50%; left: 50%; margin: -36px 0 0 -36px; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94); }
-        .face { position: absolute; width: 72px; height: 72px; border-radius: 10px; overflow: hidden; backface-visibility: hidden; background: #0e0f18; border: 1px solid rgba(126,200,227,0.5); box-shadow: 0 0 25px rgba(126,200,227,0.08), inset 0 0 30px rgba(126,200,227,0.04); }
-        .face svg { width: 100%; height: 100%; display: block; }
-        .face-front  { transform: rotateY(0deg) translateZ(36px); }
-        .face-back   { transform: rotateY(180deg) translateZ(36px); }
-        .face-right  { transform: rotateY(90deg) translateZ(36px); }
-        .face-left   { transform: rotateY(-90deg) translateZ(36px); }
-        .face-top    { transform: rotateX(90deg) translateZ(36px); }
-        .face-bottom { transform: rotateX(-90deg) translateZ(36px); }
-        .face svg .sep { stroke: rgba(126,200,227,0.3); stroke-width: 0.8; }
-        .face svg line.icon,.face svg path.icon,.face svg circle.icon,.face svg rect.icon { stroke: #7ec8e3; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; filter: drop-shadow(0 0 4px rgba(126,200,227,0.5)); }
-        .face svg circle.pt { fill: #7ec8e3; stroke: none; filter: drop-shadow(0 0 4px rgba(126,200,227,0.5)); }
 
-        /* États ADAM — icônes seulement (border/shadow par glow JS) */
-        .state-white .face svg line.icon,.state-white .face svg path.icon,.state-white .face svg circle.icon,.state-white .face svg rect.icon { stroke: rgba(126,200,227,0.4); filter: none; }
-        .state-white .face svg circle.pt { fill: rgba(126,200,227,0.4); filter: none; }
-        .state-white .face svg .sep { stroke: rgba(126,200,227,0.15); }
-        .state-silver .face svg line.icon,.state-silver .face svg path.icon,.state-silver .face svg circle.icon,.state-silver .face svg rect.icon { stroke: #22d3ee; filter: drop-shadow(0 0 5px rgba(34,211,238,0.7)); }
-        .state-silver .face svg circle.pt { fill: #22d3ee; filter: drop-shadow(0 0 5px rgba(34,211,238,0.7)); }
-        .state-silver .face svg .sep { stroke: rgba(34,211,238,0.4); }
-        .state-gold .face svg line.icon,.state-gold .face svg path.icon,.state-gold .face svg circle.icon,.state-gold .face svg rect.icon { stroke: #ffd700; filter: drop-shadow(0 0 6px rgba(255,215,0,0.8)); }
-        .state-gold .face svg circle.pt { fill: #ffd700; filter: drop-shadow(0 0 6px rgba(255,215,0,0.8)); }
-        .state-gold .face svg .sep { stroke: rgba(255,215,0,0.35); }
-        .state-emerald .face svg line.icon,.state-emerald .face svg path.icon,.state-emerald .face svg circle.icon,.state-emerald .face svg rect.icon { stroke: #34d399; filter: drop-shadow(0 0 7px rgba(52,211,153,0.95)); }
-        .state-emerald .face svg circle.pt { fill: #34d399; filter: drop-shadow(0 0 7px rgba(52,211,153,0.95)); }
-        .state-emerald .face svg .sep { stroke: rgba(52,211,153,0.55); }
-        .state-cosmic .face svg line.icon,.state-cosmic .face svg path.icon,.state-cosmic .face svg circle.icon,.state-cosmic .face svg rect.icon { stroke: #c4b5fd; filter: drop-shadow(0 0 8px rgba(131,56,236,0.9)) drop-shadow(0 0 12px rgba(255,0,110,0.6)); animation: cosmIS 3s ease-in-out infinite; }
-        .state-cosmic .face svg circle.pt { fill: #c4b5fd; filter: drop-shadow(0 0 8px rgba(131,56,236,0.9)); animation: cosmPP 1.5s ease-in-out infinite; }
-        .state-cosmic .face svg .sep { stroke: rgba(196,181,253,0.65); }
-        @keyframes cosmIS { 0%,100%{stroke:#c4b5fd} 33%{stroke:#22d3ee} 66%{stroke:#f472b6} }
-        @keyframes cosmPP { 0%,100%{fill:#c4b5fd} 50%{fill:#f472b6} }
+        .score-bar {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(180, 180, 190, 0.2);
+            border-radius: 12px; padding: 6px 12px;
+            width: calc(var(--cell) * 3 + var(--gap) * 2);
+        }
+        .score-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .score-label { font-size: 0.6rem; color: rgba(180, 180, 190, 0.5); text-transform: uppercase; letter-spacing: 0.05em; }
+        .score-value { font-size: 1rem; color: rgba(220, 220, 230, 0.9); font-weight: 500; font-variant-numeric: tabular-nums; }
+        .score-value.highlight { animation: scoreFlash 0.5s ease-out; }
+        @keyframes scoreFlash { 0% { color: #ffd700; transform: scale(1.2); } 100% { color: rgba(220, 220, 230, 0.9); transform: scale(1); } }
+        .combo { color: #34d399 !important; }
 
-        .fp { position: fixed; pointer-events: none; z-index: 1000; font-size: 1.2rem; font-weight: bold; color: rgba(255,255,255,0.95); text-shadow: 0 0 10px rgba(126,200,227,0.9), 0 0 20px rgba(126,200,227,0.5); animation: fpUp 1s ease-out forwards; }
-        @keyframes fpUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-60px) scale(1.4)} }
-        .controls { display: flex; gap: 8px; align-items: center; }
-        button { background: transparent; border: 1px solid rgba(126,200,227,0.25); color: rgba(126,200,227,0.6); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 0.72rem; letter-spacing: 0.05em; transition: all 0.2s; }
-        button:hover { border-color: rgba(126,200,227,0.6); color: rgba(126,200,227,0.95); box-shadow: 0 0 10px rgba(126,200,227,0.15); }
-        .lb.active { border-color: #34d399; color: #34d399; box-shadow: 0 0 10px rgba(52,211,153,0.3); }
+        .game-container {
+            position: relative;
+            width: calc(var(--cell) * 3 + var(--gap) * 2);
+            height: calc(var(--cell) * 5 + var(--gap) * 4);
+            overflow: hidden;
+        }
+
+        .grid {
+            position: absolute; top: 0; left: 0;
+            width: calc(var(--cell) * 3 + var(--gap) * 2);
+            height: calc(var(--cell) * 5 + var(--gap) * 4);
+        }
+
+        .cell {
+            width: var(--cell); height: var(--cell);
+            position: absolute;
+        }
+
+        /* Scene 3D - chaque cellule est une scène de perspective */
+        .scene {
+            width: 100%; height: 100%;
+            perspective: 500px;
+            position: relative;
+        }
+
+        .cube {
+            width: 72px; height: 72px;
+            position: absolute;
+            top: 50%; left: 50%;
+            margin-left: -36px; margin-top: -36px;
+            transform-style: preserve-3d;
+            transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .cube:active { cursor: grabbing; }
+        .cube.fusing { animation: fusingPulse 0.4s ease-out; }
+        @keyframes fusingPulse {
+            0% { transform-style: preserve-3d; }
+            50% { filter: brightness(2); }
+            100% {}
+        }
+
+        .cube.empty-cube {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .cube-face {
+            position: absolute;
+            width: 72px; height: 72px;
+            border-radius: 10px;
+            overflow: hidden;
+            backface-visibility: hidden;
+            background: #0e0f18;
+            border: 1px solid rgba(126, 200, 227, 0.4);
+            box-shadow: 0 0 20px rgba(126,200,227,0.06), inset 0 0 20px rgba(126,200,227,0.03);
+        }
+        .cube-face svg { width: 100%; height: 100%; display: block; }
+
+        .face-front  { transform: rotateY(0deg)   translateZ(36px); }
+        .face-back   { transform: rotateY(180deg)  translateZ(36px); }
+        .face-right  { transform: rotateY(90deg)   translateZ(36px); }
+        .face-left   { transform: rotateY(-90deg)  translateZ(36px); }
+        .face-top    { transform: rotateX(90deg)   translateZ(36px); }
+        .face-bottom { transform: rotateX(-90deg)  translateZ(36px); }
+
+        /* SVG icons sur les faces */
+        .cube-face svg .separator { stroke: rgba(126,200,227,0.25); stroke-width: 0.8; }
+        .cube-face svg line.icon, .cube-face svg path.icon,
+        .cube-face svg circle.icon, .cube-face svg rect.icon {
+            stroke: #7ec8e3; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round; fill: none;
+            filter: drop-shadow(0 0 3px rgba(126,200,227,0.4));
+        }
+        .cube-face svg circle.point {
+            fill: #7ec8e3; stroke: none;
+            filter: drop-shadow(0 0 3px rgba(126,200,227,0.4));
+        }
+
+        /* États colorés sur les cubes */
+        .cube.white .cube-face { border-color: rgba(180, 180, 190, 0.35); }
+        .cube.white .cube-face svg line.icon, .cube.white .cube-face svg path.icon,
+        .cube.white .cube-face svg circle.icon, .cube.white .cube-face svg rect.icon { stroke: rgba(180, 180, 190, 0.5); }
+        .cube.white .cube-face svg circle.point { fill: rgba(180, 180, 190, 0.5); }
+        .cube.white .cube-face svg .separator { stroke: rgba(180, 180, 190, 0.2); }
+
+        .cube.silver .cube-face { border-color: rgba(6, 182, 212, 0.6); box-shadow: 0 0 15px rgba(6,182,212,0.2), inset 0 0 12px rgba(6,182,212,0.05); }
+        .cube.silver .cube-face svg line.icon, .cube.silver .cube-face svg path.icon,
+        .cube.silver .cube-face svg circle.icon, .cube.silver .cube-face svg rect.icon { stroke: #22d3ee; filter: drop-shadow(0 0 3px rgba(34,211,238,0.5)); }
+        .cube.silver .cube-face svg circle.point { fill: #22d3ee; filter: drop-shadow(0 0 3px rgba(34,211,238,0.5)); }
+        .cube.silver .cube-face svg .separator { stroke: rgba(34,211,238,0.3); }
+
+        .cube.gold .cube-face { border-color: rgba(255, 215, 0, 0.7); box-shadow: 0 0 20px rgba(255,215,0,0.25), inset 0 0 15px rgba(255,215,0,0.05); }
+        .cube.gold .cube-face svg line.icon, .cube.gold .cube-face svg path.icon,
+        .cube.gold .cube-face svg circle.icon, .cube.gold .cube-face svg rect.icon { stroke: #ffd700; filter: drop-shadow(0 0 5px rgba(255,215,0,0.6)); }
+        .cube.gold .cube-face svg circle.point { fill: #ffd700; filter: drop-shadow(0 0 5px rgba(255,215,0,0.6)); }
+        .cube.gold .cube-face svg .separator { stroke: rgba(255,215,0,0.3); }
+
+        .cube.emerald .cube-face { border-color: rgba(52, 211, 153, 0.9); box-shadow: 0 0 25px rgba(5,150,105,0.4), 0 0 40px rgba(52,211,153,0.2), inset 0 0 20px rgba(52,211,153,0.08); animation: emeraldFaceGlow 2.5s ease-in-out infinite; }
+        @keyframes emeraldFaceGlow {
+            0%,100% { box-shadow: 0 0 20px rgba(5,150,105,0.4), inset 0 0 15px rgba(52,211,153,0.08); }
+            50% { box-shadow: 0 0 35px rgba(5,150,105,0.6), inset 0 0 25px rgba(52,211,153,0.12); }
+        }
+        .cube.emerald .cube-face svg line.icon, .cube.emerald .cube-face svg path.icon,
+        .cube.emerald .cube-face svg circle.icon, .cube.emerald .cube-face svg rect.icon { stroke: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.8)); }
+        .cube.emerald .cube-face svg circle.point { fill: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.8)); }
+        .cube.emerald .cube-face svg .separator { stroke: rgba(52,211,153,0.5); }
+
+        @property --cosmic-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes cosmicRotate { to { --cosmic-angle: 360deg; } }
+        .cube.cosmic .cube-face {
+            border: 2px solid transparent;
+            background: linear-gradient(#0e0f18, #0e0f18) padding-box,
+                conic-gradient(from var(--cosmic-angle, 0deg), #ff006e, #8338ec, #06b6d4, #34d399, #ffd700, #ff006e) border-box;
+            animation: cosmicRotate 4s linear infinite;
+        }
+        .cube.cosmic .cube-face svg line.icon, .cube.cosmic .cube-face svg path.icon,
+        .cube.cosmic .cube-face svg circle.icon, .cube.cosmic .cube-face svg rect.icon { stroke: #c4b5fd; filter: drop-shadow(0 0 6px rgba(131,56,236,0.7)); animation: cosmicIconShift 3s ease-in-out infinite; }
+        @keyframes cosmicIconShift { 0%,100% { stroke: #c4b5fd; } 33% { stroke: #22d3ee; } 66% { stroke: #f472b6; } }
+        .cube.cosmic .cube-face svg circle.point { fill: #c4b5fd; animation: cosmicPointPulse 1.5s ease-in-out infinite; }
+        @keyframes cosmicPointPulse { 0%,100% { fill: #c4b5fd; } 50% { fill: #f472b6; } }
+        .cube.cosmic .cube-face svg .separator { stroke: rgba(196,181,253,0.5); }
+
+        @property --supernova-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes supernovaRotate { to { --supernova-angle: 360deg; } }
+        .cube.supernovae .cube-face {
+            border: 3px solid transparent;
+            background: linear-gradient(#0e0f18, #0e0f18) padding-box,
+                conic-gradient(from var(--supernova-angle, 0deg), #ff4500, #ff8c00, #ffd700, #ffff00, #ff8c00, #ff4500) border-box;
+            animation: supernovaRotate 3s linear infinite;
+        }
+        .cube.supernovae .cube-face svg line.icon, .cube.supernovae .cube-face svg path.icon,
+        .cube.supernovae .cube-face svg circle.icon, .cube.supernovae .cube-face svg rect.icon { stroke: #ffeb3b; filter: drop-shadow(0 0 6px rgba(255,215,0,0.7)); animation: supernovaIconShift 2.5s ease-in-out infinite; }
+        @keyframes supernovaIconShift { 0%,100% { stroke: #ffeb3b; } 25% { stroke: #ff8c00; } 50% { stroke: #ffd700; } 75% { stroke: #ff6347; } }
+        .cube.supernovae .cube-face svg circle.point { fill: #ffeb3b; animation: supernovaPointPulse 1.2s ease-in-out infinite; }
+        @keyframes supernovaPointPulse { 0%,100% { fill: #ffeb3b; } 33% { fill: #ff8c00; } 66% { fill: #ffd700; } }
+        .cube.supernovae .cube-face svg .separator { stroke: rgba(255,235,59,0.5); }
+
+        /* Glow dynamique front face selon orientation */
+        .cube .face-front { transition: box-shadow 0.1s; }
+
+        .controls {
+            display: flex; gap: 8px;
+            width: calc(var(--cell) * 3 + var(--gap) * 2);
+            justify-content: space-between;
+        }
+        button {
+            background: transparent; border: 1px solid rgba(180, 180, 190, 0.35); color: rgba(180, 180, 190, 0.7);
+            padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; letter-spacing: 0.05em; transition: all 0.2s;
+        }
+        button:hover { border-color: rgba(180, 180, 190, 0.6); color: rgba(220, 220, 230, 0.9); }
+
+        .floating-points {
+            position: fixed; pointer-events: none; font-size: 1.1rem; font-weight: bold;
+            color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.8);
+            animation: floatUp 1s ease-out forwards; z-index: 1000;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+        }
+
+        /* Indicateur de face active (highlight bord) */
+        .cube .face-front.active-front {
+            border-color: rgba(255,255,255,0.6);
+        }
     </style>
 </head>
 <body>
-<div class="logo">
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><path d="M8 26L18 10L28 26"/></svg></div>
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><polygon points="10,10 26,18 10,26"/></svg></div>
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><path d="M8 26L18 10L28 26"/></svg></div>
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><line x1="10" y1="8" x2="10" y2="28"/><line x1="18" y1="8" x2="18" y2="28"/><line x1="26" y1="8" x2="26" y2="28"/></svg></div>
-</div>
-<div class="score-bar">
-    <div class="si"><span class="sl">Score</span><span class="sv" id="score">0</span></div>
-    <div class="si"><span class="sl">Combo</span><span class="sv combo" id="combo">×1</span></div>
-    <div class="si"><span class="sl">Best</span><span class="sv" id="best">0</span></div>
-    <div class="si"><span class="sl">💎</span><span class="sv" style="font-size:.8rem" id="c-silver">0</span></div>
-    <div class="si"><span class="sl">🏆</span><span class="sv" style="font-size:.8rem" id="c-gold">0</span></div>
-    <div class="si"><span class="sl">💚</span><span class="sv" style="font-size:.8rem" id="c-emerald">0</span></div>
-    <div class="si"><span class="sl">🌟</span><span class="sv" style="font-size:.8rem" id="c-cosmic">0</span></div>
-</div>
-<div class="grid" id="grid"></div>
-<div class="controls">
-    <div style="display:flex;gap:6px"><button class="lb active" onclick="setLevel(1)">1</button><button class="lb" onclick="setLevel(2)">2</button><button class="lb" onclick="setLevel(3)">3</button><button class="lb" onclick="setLevel(4)">4</button></div>
-    <button onclick="undo()">Undo</button><button onclick="resetGame()">Reset</button>
-</div>
-<script>
-const FC=['face-front','face-back','face-right','face-left','face-top','face-bottom'];
-const FN=[[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,-1,0],[0,1,0]];
-function mul(A,B){const R=[[0,0,0],[0,0,0],[0,0,0]];for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)R[i][j]+=A[i][k]*B[k][j];return R;}
-function cm(M){return M.map(r=>r.map(v=>{const c=Math.round(v);return Math.abs(v-c)<1e-4?c:v;}));}
-function I(){return[[1,0,0],[0,1,0],[0,0,1]];}
-function rX(){return[[1,0,0],[0,0,-1],[0,1,0]];}function rXn(){return[[1,0,0],[0,0,1],[0,-1,0]];}
-function rY(){return[[0,0,1],[0,1,0],[-1,0,0]];}function rYn(){return[[0,0,-1],[0,1,0],[1,0,0]];}
-function rZn(){return[[0,1,0],[-1,0,0],[0,0,1]];}
-function m2css(M){return`matrix3d(${M[0][0]},${M[1][0]},${M[2][0]},0,${M[0][1]},${M[1][1]},${M[2][1]},0,${M[0][2]},${M[1][2]},${M[2][2]},0,0,0,0,1)`;}
-function parsem3d(str){const m=str.match(/matrix3d\((.+)\)/);if(!m)return null;const v=m[1].split(',').map(Number);return[[v[0],v[4],v[8]],[v[1],v[5],v[9]],[v[2],v[6],v[10]]];}
-function tnorm(M,n){return[M[0][0]*n[0]+M[0][1]*n[1]+M[0][2]*n[2],M[1][0]*n[0]+M[1][1]*n[1]+M[1][2]*n[2],M[2][0]*n[0]+M[2][1]*n[1]+M[2][2]*n[2]];}
 
-// Glow dynamique — style domino-cube v12 avec couleurs par état
-const SGLOW={white:[126,200,227],silver:[34,211,238],gold:[255,215,0],emerald:[52,211,153],cosmic:[196,181,253]};
-function updateGlow(cs){
-    const computed=getComputedStyle(cs.el).transform;
-    const M=(computed&&computed!=='none')?parsem3d(computed):cs.mat;
-    if(!M)return;
-    const[r,g,b]=SGLOW[cs.state]||SGLOW.white;
-    cs.faceEls.forEach((f,i)=>{
-        const wn=tnorm(M,FN[i]);const k=Math.max(0,wn[2]);
-        f.style.boxShadow=`0 0 ${k*30}px rgba(${r},${g},${b},${k*0.25}),0 0 ${k*12}px rgba(${r},${g},${b},${k*0.15}),inset 0 0 25px rgba(${r},${g},${b},${k*0.1})`;
-        f.style.borderColor=`rgba(${r},${g},${b},${0.25+k*0.45})`;
-    });
-}
-function glowLoop(){CS.forEach(cs=>{if(cs&&cs.el.isConnected)updateGlow(cs);});requestAnimationFrame(glowLoop);}
+    <div class="logo">
+        <div class="logo-icon"><svg viewBox="0 0 36 36"><path d="M8 26L18 10L28 26"/></svg></div>
+        <div class="logo-icon"><svg viewBox="0 0 36 36"><polygon points="10,10 26,18 10,26"/></svg></div>
+        <div class="logo-icon"><svg viewBox="0 0 36 36"><path d="M8 26L18 10L28 26"/></svg></div>
+        <div class="logo-icon"><svg viewBox="0 0 36 36"><line x1="10" y1="8" x2="10" y2="28"/><line x1="18" y1="8" x2="18" y2="28"/><line x1="26" y1="8" x2="26" y2="28"/></svg></div>
+    </div>
 
-const ICONS={chevron:{f1:'M20 32L45 12L70 32',f2:'M20 12L45 32L70 12',t:'path'},circle:{f1:'45,22,12',f2:'45,22,12',t:'circle'},twoCircles:{f1:'30,22,8|60,22,8',f2:'30,22,8|60,22,8',t:'circles'},line:{f1:'15,22,75,22',f2:'15,22,75,22',t:'line'},threeLines:{f1:'25,10,25,34|45,10,45,34|65,10,65,34',f2:'25,10,25,34|45,10,45,34|65,10,65,34',t:'lines'},twoPoints:{f1:'30,22,4|60,22,4',f2:'30,22,4|60,22,4',t:'points'},square:{f1:'25,10,40,24,3',f2:'25,10,40,24,3',t:'rect'},wave:{f1:'M10 22Q28 6 45 22Q62 38 80 22',f2:'M10 22Q28 6 45 22Q62 38 80 22',t:'path'},arc:{f1:'M20 30Q45 8 70 30',f2:'M20 14Q45 36 70 14',t:'path'},diamond:{f1:'M45 8L70 22L45 36L20 22Z',f2:'M45 8L70 22L45 36L20 22Z',t:'path'},twoL:{f1:'M15 10L15 22L27 22',f2:'M75 10L75 22L63 22',t:'path'},target:{f1:'45,22,12|45,22,4',f2:'45,22,12|45,22,4',t:'target'}};
-const IK=Object.keys(ICONS);
-const LICONS={1:['chevron','circle','twoCircles','line','threeLines','twoPoints','square','wave'],2:['arc','diamond','twoL','target','twoCircles','line','square','wave'],3:['chevron','circle','twoCircles','line','threeLines','twoPoints','square','wave'],4:['chevron','circle','twoCircles','line','threeLines','twoPoints','square','wave']};
-function ri(icon,f2){const d=ICONS[icon],data=f2?d.f2:d.f1;if(d.t==='path')return`<path class="icon" d="${data}"/>`;if(d.t==='circle'){const[cx,cy,r]=data.split(',');return`<circle class="icon" cx="${cx}" cy="${cy}" r="${r}"/>`;}if(d.t==='line'){const[x1,y1,x2,y2]=data.split(',');return`<line class="icon" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;}if(d.t==='rect'){const[x,y,w,h,rx]=data.split(',');return`<rect class="icon" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;}if(d.t==='target'){const[p1,p2]=data.split('|');const[a,b,c]=p1.split(',');const[d2,e,f]=p2.split(',');return`<circle class="icon" cx="${a}" cy="${b}" r="${c}"/><circle class="pt" cx="${d2}" cy="${e}" r="${f}"/>`;}return data.split('|').map(p=>{const v=p.split(',');return(d.t==='circles'||d.t==='points')?`<circle class="${d.t==='points'?'pt':'icon'}" cx="${v[0]}" cy="${v[1]}" r="${v[2]}"/>`:`<line class="icon" x1="${v[0]}" y1="${v[1]}" x2="${v[2]}" y2="${v[3]}"/>`;}).join('');}
-function svgDom(f1,f2){return`<svg viewBox="0 0 90 90"><line class="sep" x1="0" y1="45" x2="90" y2="45"/><g>${ri(f1,false)}</g><g transform="translate(0,45)">${ri(f2,true)}</g></svg>`;}
+    <div class="score-bar">
+        <div class="score-item">
+            <div class="score-label">Score</div>
+            <div class="score-value" id="score">0</div>
+        </div>
+        <div class="score-item">
+            <div class="score-label">Best</div>
+            <div class="score-value" id="best">0</div>
+        </div>
+        <div class="score-item">
+            <div class="score-label">Combo</div>
+            <div class="score-value combo" id="combo" style="opacity:0.5">×1</div>
+        </div>
+    </div>
 
-const COLS=4,ROWS=4,TOTAL=16;
-const SO=['white','silver','gold','emerald','cosmic'];
-const SM={white:1,silver:2,gold:3,emerald:5,cosmic:10};
-const PTS={simple:100,chain:500,twin:1000};
-const FM=400,FF=200,FA=500,GD=150,MH=20;
-let doms=[],hist=[],shist=[],matHist=[];
-let anim=false,lrot=false,drag=null,rq=[];
-let score=0,best=0,combo=1,lastF=0,lv=1;
-let fc={silver:0,gold:0,emerald:0,cosmic:0};
-let CS=[]; const G=document.getElementById('grid');
+    <div class="game-container" id="game-container">
+        <div class="grid" id="grid"></div>
+    </div>
 
-function buildGrid(){G.innerHTML='';CS=[];for(let i=0;i<TOTAL;i++){const scene=document.createElement('div');scene.className='scene';const cube=document.createElement('div');cube.className='cube state-white';scene.appendChild(cube);G.appendChild(scene);const fels=[];FC.forEach(cls=>{const f=document.createElement('div');f.className='face '+cls;f.innerHTML=`<svg viewBox="0 0 90 90"></svg>`;cube.appendChild(f);fels.push(f);});CS.push({el:cube,faceEls:fels,mat:I(),state:'white'});}}
+    <div class="controls">
+        <button onclick="undoAction()">↩ Undo</button>
+        <button onclick="resetGame()">↺ Reset</button>
+    </div>
 
-function render(){for(let i=0;i<TOTAL;i++){const cs=CS[i],d=doms[i];cs.el.className='cube state-'+(d?d.state:'empty');cs.state=d?d.state:'white';if(d){cs.faceEls[0].innerHTML=svgDom(d.f1,d.f2);cs.faceEls[1].innerHTML=svgDom(d.f2,d.f1);cs.faceEls[2].innerHTML=svgDom(d.f1,d.f2);cs.faceEls[3].innerHTML=svgDom(d.f2,d.f1);cs.faceEls[4].innerHTML=svgDom(d.f1,d.f2);cs.faceEls[5].innerHTML=svgDom(d.f2,d.f1);}else cs.faceEls.forEach(f=>{f.innerHTML=`<svg viewBox="0 0 90 90"></svg>`;});}}
+    <script>
+    const COLS = 3, ROWS = 5, TOTAL = COLS * ROWS;
+    const STATE_ORDER = ['white','silver','gold','emerald','cosmic','supernovae'];
+    const STATE_MULTIPLIER = { white:1, silver:2, gold:5, emerald:10, cosmic:25, supernovae:50 };
+    const POINTS = { simple: 100, chain: 300, twin: 500 };
+    const FUSION_MOVE = 200, FUSION_APPEAR = 150;
+    const LEVEL_SEEDS = { 1: 12345 };
 
-function gp(i){return{x:i%COLS,y:Math.floor(i/COLS)};}
-function gi(x,y){return(x<0||x>=COLS||y<0||y>=ROWS)?-1:y*COLS+x;}
-function gef(d,dir){if(!d)return null;const r=((d.rot%360)+360)%360;const m={0:{top:'f1',bottom:'f2'},90:{left:'f2',right:'f1'},180:{top:'f2',bottom:'f1'},270:{left:'f1',right:'f2'}};const k=m[r]?.[dir];return k?d[k]:null;}
-function grf(d,excDir){if(!d)return null;const r=((d.rot%360)+360)%360;const m={0:{top:'f2',bottom:'f1'},90:{right:'f2',left:'f1'},180:{top:'f1',bottom:'f2'},270:{right:'f1',left:'f2'}};const k=m[r]?.[excDir];return k?d[k]:null;}
-function twins(a,b){if(!a||!b)return false;const ra=((a.rot%360)+360)%360,rb=((b.rot%360)+360)%360;if(ra===rb&&a.f1===b.f1&&a.f2===b.f2)return true;if(Math.abs(ra-rb)===180&&a.f1===b.f2&&a.f2===b.f1)return true;return false;}
+    // ============================================================
+    // ICONS (même set qu'ADAM niveau 1)
+    // ============================================================
+    const ICONS = {
+        chevron:    { f1:'M 20 30 L 45 12 L 70 30', f2:'M 20 14 L 45 32 L 70 14', t:'path' },
+        circle:     { f1:'45,22,12', f2:'45,22,5', t:'circle' },
+        twoCircles: { f1:'30,22,8|60,22,8', f2:'30,22,4|60,22,4', t:'points' },
+        line:       { f1:'20,22,70,22', f2:'45,10,45,34', t:'line' },
+        threeLines: { f1:'25,10,25,34|45,10,45,34|65,10,65,34', f2:'20,22,70,22|20,14,70,14|20,30,70,30', t:'lines' },
+        twoPoints:  { f1:'30,22,5|60,22,5', f2:'45,14,5|45,30,5', t:'points' },
+        square:     { f1:'25,10,40,24,4', f2:'25,10,40,24,4', t:'rect' },
+        wave:       { f1:'M10 22Q25 10 45 22Q65 34 80 22', f2:'M10 14Q25 26 45 14Q65 2 80 14', t:'path' },
+    };
 
-function applyRot2D(i){CS[i].mat=cm(mul(rZn(),CS[i].mat));CS[i].el.style.transition='transform 0.25s cubic-bezier(0.4,0,0.2,1)';CS[i].el.style.transform=m2css(CS[i].mat);setTimeout(()=>{CS[i].el.style.transition='transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';},260);}
-function resetCubeMat(i,newRot){CS[i].mat=I();const steps=Math.round(((newRot||0)%360+360)%360/90);for(let s=0;s<steps;s++)CS[i].mat=cm(mul(rZn(),CS[i].mat));CS[i].el.style.transition='none';CS[i].el.style.transform=m2css(CS[i].mat);requestAnimationFrame(()=>{CS[i].el.style.transition='transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';});}
+    function renderIcon(icon, isFace2) {
+        const d = ICONS[icon], data = isFace2 ? d.f2 : d.f1;
+        if (d.t === 'path') return `<path class="icon" d="${data}"/>`;
+        if (d.t === 'circle') { const [cx,cy,r] = data.split(','); return `<circle class="icon" cx="${cx}" cy="${cy}" r="${r}"/>`; }
+        if (d.t === 'line') { const [x1,y1,x2,y2] = data.split(','); return `<line class="icon" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }
+        if (d.t === 'rect') { const [x,y,w,h,rx] = data.split(','); return `<rect class="icon" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`; }
+        if (d.t === 'points' || d.t === 'circles') return data.split('|').map(p => { const v=p.split(','); return `<circle class="${d.t==='points'?'point':'icon'}" cx="${v[0]}" cy="${v[1]}" r="${v[2]}"/>`; }).join('');
+        if (d.t === 'lines') return data.split('|').map(p => { const [x1,y1,x2,y2]=p.split(','); return `<line class="icon" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }).join('');
+        return '';
+    }
 
-function dd(dx,dy){const ax=Math.abs(dx),ay=Math.abs(dy);if(ax<15||ay<15||ax/ay<0.5||ax/ay>2)return null;return dy<0?(dx>0?'ur':'ul'):(dx>0?'dr':'dl');}
-function gg(x,y,dir){const off={ur:[0,-1],ul:[-1,-1],dr:[0,0],dl:[-1,0]};const[ox,oy]=off[dir],tx=x+ox,ty=y+oy;if(tx<0||tx>COLS-2||ty<0||ty>ROWS-2)return null;return[gi(tx,ty),gi(tx+1,ty),gi(tx,ty+1),gi(tx+1,ty+1)];}
-function cw(dir){return dir==='ur'||dir==='dr';}
+    // ============================================================
+    // FACES SVG pour cube 3D — chaque face porte 1 symbole
+    // Un domino (face1, face2) = cube avec face-front = face1, face-back = face2
+    // face-right = face1 aussi (pour fusion horizontale), face-left = face2
+    // face-top = face1 (pour fusion verticale), face-bottom = face2
+    // ============================================================
+    function makeFaceSVG(icon, isFace2) {
+        return `<svg viewBox="0 0 90 90">
+            <g>${renderIcon(icon, isFace2)}</g>
+        </svg>`;
+    }
 
-function execRot(idx,clockwise,cb){if(lrot)return;save();lrot=true;const map=clockwise?[2,0,3,1]:[1,3,0,2];const cells=idx.map((id,k)=>({scene:G.children[id],sx:id%COLS,sy:Math.floor(id/COLS),tx:idx[map[k]]%COLS,ty:Math.floor(idx[map[k]]/COLS)}));const dur=400,start=performance.now(),sz=G.children[0]?.offsetWidth||90,gap=parseFloat(getComputedStyle(G).gap)||6;function step(t){const p=Math.min((t-start)/dur,1),e=1-Math.pow(1-p,3);cells.forEach(c=>{c.scene.style.transform=`translate(${(c.tx-c.sx)*(sz+gap)*e}px,${(c.ty-c.sy)*(sz+gap)*e}px)`;});if(p<1)requestAnimationFrame(step);else finishRot(idx,clockwise,cb);}requestAnimationFrame(step);}
-function finishRot(idx,clockwise,cb){idx.forEach(i=>{G.children[i].style.transform='';});const map=clockwise?[2,0,3,1]:[1,3,0,2];const sd=idx.map(i=>doms[i]),sm=idx.map(i=>CS[i].mat.map(r=>[...r]));for(let k=0;k<4;k++){const dest=idx[map[k]];doms[dest]=sd[k];CS[dest].mat=sm[k];CS[dest].el.style.transition='none';CS[dest].el.style.transform=m2css(CS[dest].mat);const d2=dest;requestAnimationFrame(()=>{CS[d2].el.style.transition='transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';});}render();lrot=false;setTimeout(checkF,50);if(cb)cb();}
-function tryRot(x,y,dx,dy){const dir=dd(dx,dy);if(!dir)return false;const grp=gg(x,y,dir);if(!grp||!grp.some(i=>doms[i]))return false;execRot(grp,cw(dir),null);return true;}
+    function makeDominoFaceSVG(icon1, icon2) {
+        return `<svg viewBox="0 0 90 90">
+            <line class="separator" x1="0" y1="45" x2="90" y2="45"/>
+            <g>${renderIcon(icon1, false)}</g>
+            <g transform="translate(0,45)">${renderIcon(icon2, true)}</g>
+        </svg>`;
+    }
 
-function qRot(i){rq.push(i);if(rq.length===1)pRot();}
-function pRot(){if(!rq.length||anim||lrot)return;const i=rq[0],d=doms[i];if(!d){rq.shift();pRot();return;}save();d.rot=(d.rot+90)%360;applyRot2D(i);render();setTimeout(()=>{rq.shift();if(rq.length)pRot();else checkF();},300);}
+    // ============================================================
+    // STRUCTURE DES CUBES
+    // Chaque domino a 3 paires de symboles sur 6 faces:
+    //   front/back = paire principale (face1/face2)
+    //   right/left = paire secondaire (rotée, pour voisin droite/gauche)
+    //   top/bottom = paire tertiaire (rotée, pour voisin haut/bas)
+    //
+    // La rotation Y du cube expose différentes paires côté droit:
+    //   rotY=0   → front visible, face RIGHT de ce cube = face-right
+    //   rotY=90  → face-right devient front, face RIGHT = face-back
+    //   rotY=180 → face-back devient front, face RIGHT = face-left
+    //   rotY=270 → face-left devient front, face RIGHT = face-front
+    //
+    // On mappe :
+    //   cubeRotY=0   → expose face1 en front, face2 côté bas
+    //   cubeRotY=90  → expose face2 en front (via right→front), face1 côté bas
+    //
+    // Pour la fusion : on compare la face "exposed" de la face DROITE d'un cube
+    // avec la face "exposed" de la face GAUCHE du cube voisin.
+    // ============================================================
 
-function hs(e){if(anim||lrot)return;const t=e.touches?.[0]||e,el=e.target.closest('.scene');if(!el)return;let idx=-1;for(let i=0;i<G.children.length;i++)if(G.children[i]===el){idx=i;break;}if(idx<0)return;drag={idx,x:idx%COLS,y:Math.floor(idx/COLS),sx:t.clientX,sy:t.clientY,moved:false,empty:!doms[idx]};e.preventDefault();}
-function hm(e){if(!drag||drag.moved)return;const t=e.touches?.[0]||e,dx=t.clientX-drag.sx,dy=t.clientY-drag.sy;if(dd(dx,dy)){drag.moved=true;tryRot(drag.x,drag.y,dx,dy);}e.preventDefault();}
-function he(e){if(drag&&!drag.moved&&!drag.empty)qRot(drag.idx);drag=null;}
-G.addEventListener('mousedown',hs);G.addEventListener('touchstart',hs,{passive:false});document.addEventListener('mousemove',hm);document.addEventListener('touchmove',hm,{passive:false});document.addEventListener('mouseup',he);document.addEventListener('touchend',he);
+    // ============================================================
+    // DATA
+    // ============================================================
+    let dominos = [];
+    let cubeStates = []; // état 3D de chaque cube : { rotX, rotY, state1, state2, ... }
+    let isAnimating = false;
+    let score = 0, bestScore = 0, comboCount = 0, lastFusionTime = 0;
+    let history = [], scoreHistory = [];
+    let dominoSequenceIndex = 1;
+    let cubeEls = []; // références DOM aux cubes
+    let CELL_SIZE = 0, CELL_TOTAL = 0, GRID_WIDTH = 0, GRID_HEIGHT = 0;
 
-function addScore(base,states){const now=Date.now();let m=1;states.forEach(s=>{m=Math.max(m,SM[s]||1);});if(now-lastF<2000&&lastF>0)combo++;else combo=1;lastF=now;const pts=Math.round(base*m*(1+(combo-1)*0.5));score+=pts;if(score>best)best=score;const sc=document.getElementById('score');sc.textContent=score.toLocaleString();sc.classList.remove('flash');void sc.offsetWidth;sc.classList.add('flash');const co=document.getElementById('combo');co.textContent=combo>1?`×${(1+(combo-1)*0.5).toFixed(1)}`:'×1';co.style.opacity=combo>1?'1':'0.5';document.getElementById('best').textContent=best.toLocaleString();return pts;}
-function showFP(pts,x,y){const el=document.createElement('div');el.className='fp';el.textContent=`+${pts.toLocaleString()}`;el.style.left=x+'px';el.style.top=y+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),1000);}
+    // Drag state
+    let isDragging = false, dragAxis = null;
+    let dragRow = -1, dragCol = -1;
+    let dragStartX = 0, dragStartY = 0, dragStartTime = 0;
+    let dragOffset = 0, initialPositions = [], ghostElements = [];
+    let swipeStartX = 0, swipeStartY = 0;
+    let swipeTargetCube = null;
+    let swipeMode = null; // 'cube-rotate' or 'column-scroll'
 
-function reaction(fused,ns){const fset=new Set(fused),nbrs=new Set();fused.forEach(i=>{const{x,y}=gp(i);[[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dy])=>{const ni=gi(x+dx,y+dy);if(ni!==-1&&!fset.has(ni)&&doms[ni])nbrs.add(ni);});});const cx=fused.reduce((s,i)=>s+i%COLS,0)/fused.length;const spins={white:1,silver:2,gold:2,emerald:3,cosmic:4}[ns]||1;nbrs.forEach(ni=>{const{x}=gp(ni);const dist=Math.abs(x-cx)+0.5;setTimeout(()=>{const cs=CS[ni];if(!cs||!doms[ni])return;const origMat=cs.mat.map(r=>[...r]);const fn=x<cx?rY:rYn;for(let s=0;s<spins;s++)setTimeout(()=>{cs.mat=cm(mul(fn(),cs.mat));cs.el.style.transition='transform 0.3s ease-in-out';cs.el.style.transform=m2css(cs.mat);},s*350);setTimeout(()=>{cs.mat=origMat.map(r=>[...r]);cs.el.style.transition='transform 0.5s ease-out';cs.el.style.transform=m2css(cs.mat);},spins*350+100);},500+Math.round(dist*90));});}
+    function seededRandom(seed) {
+        let s = seed;
+        return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    }
 
-let cfr=0;
-function checkF(){if(anim||lrot){cfr++;if(cfr<10)setTimeout(checkF,150);else cfr=0;return;}cfr=0;
-for(let i=0;i<TOTAL;i++){if(!doms[i])continue;const{x,y}=gp(i);const iR=gi(x+1,y);if(iR!==-1&&doms[iR]&&twins(doms[i],doms[iR])){doTwin(i,iR,'h');return;}const iB=gi(x,y+1);if(iB!==-1&&doms[iB]&&twins(doms[i],doms[iB])){doTwin(i,iB,'v');return;}}
-for(let i=0;i<TOTAL;i++){if(!doms[i])continue;const{x,y}=gp(i);if(x>0&&x<COLS-1){const iL=gi(x-1,y),iR=gi(x+1,y);if(iL!==-1&&iR!==-1&&doms[iL]&&doms[iR]){const a=gef(doms[iL],'right'),b=gef(doms[i],'left'),c=gef(doms[i],'right'),d=gef(doms[iR],'left');if(a&&b&&a===b&&c&&d&&c===d){doChain(iL,i,iR,'h');return;}}}if(y>0&&y<ROWS-1){const iT=gi(x,y-1),iB=gi(x,y+1);if(iT!==-1&&iB!==-1&&doms[iT]&&doms[iB]){const a=gef(doms[iT],'bottom'),b=gef(doms[i],'top'),c=gef(doms[i],'bottom'),d=gef(doms[iB],'top');if(a&&b&&a===b&&c&&d&&c===d){doChain(iT,i,iB,'v');return;}}}}
-for(let i=0;i<TOTAL;i++){if(!doms[i])continue;const{x,y}=gp(i);const iR=gi(x+1,y);if(iR!==-1&&doms[iR]){const a=gef(doms[i],'right'),b=gef(doms[iR],'left');if(a&&b&&a===b){doSimple(i,iR,'h');return;}}const iB=gi(x,y+1);if(iB!==-1&&doms[iB]){const a=gef(doms[i],'bottom'),b=gef(doms[iB],'top');if(a&&b&&a===b){doSimple(i,iB,'v');return;}}}
-if(Date.now()-lastF>2000){combo=1;document.getElementById('combo').style.opacity='0.5';}}
+    function getPos(i) { return { x: i % COLS, y: Math.floor(i / COLS) }; }
+    function getIndex(x, y) { return (x < 0 || x >= COLS || y < 0 || y >= ROWS) ? -1 : y * COLS + x; }
 
-function fusionAnim(indices,ns,afterFn){const cx=indices.reduce((s,i)=>s+i%COLS,0)/indices.length,cy=indices.reduce((s,i)=>s+Math.floor(i/COLS),0)/indices.length;indices.forEach(i=>{const cs=CS[i],{x,y}=gp(i);const fn=(x<cx)?rYn:(x>cx)?rY:(y<cy)?rXn:rX;cs.el.style.transition='transform 0.35s ease-in';cs.el.style.transform=m2css(cm(mul(fn(),cs.mat)));});reaction(indices,ns);setTimeout(()=>{indices.forEach(i=>{CS[i].el.style.opacity='0';CS[i].el.style.transition='opacity 0.2s';});setTimeout(()=>{afterFn();},FF);},FM);}
-function restoreCube(i,newRot){CS[i].el.style.opacity='';CS[i].el.style.transition='none';resetCubeMat(i,newRot||0);CS[i].state=doms[i]?doms[i].state:'white';}
+    function newDominoData(face1, face2, state='white') {
+        return {
+            face1, face2,
+            rotY: 0, // 0, 90, 180, 270 — rotation Y du cube
+            state, state1: state, state2: state
+        };
+    }
 
-function doSimple(i1,i2,dir){anim=true;const d1=doms[i1],d2=doms[i2];const nf1=grf(d1,dir==='h'?'right':'bottom'),nf2=grf(d2,dir==='h'?'left':'top');const maxSI=Math.max(SO.indexOf(d1.state),SO.indexOf(d2.state));const ns=SO[Math.min(maxSI+1,SO.length-1)];if(ns!=='white'&&fc[ns]!==undefined){fc[ns]++;document.getElementById('c-'+ns).textContent=fc[ns];}let base=PTS.simple;if(d1.state===d2.state&&d1.state!=='white')base={silver:1000,gold:3000,emerald:5000,cosmic:10000}[d1.state]||base;const pts=addScore(base,[d1.state,d2.state]);const rect=G.children[i1].getBoundingClientRect();showFP(pts,rect.left+rect.width/2,rect.top);fusionAnim([i1,i2],ns,()=>{const rot=dir==='h'?90:0;doms[i1]={f1:nf1||IK[0],f2:nf2||IK[0],rot,state:ns};doms[i2]=null;restoreCube(i1,rot);restoreCube(i2,0);render();setTimeout(()=>{anim=false;gravity();},FA);});}
-function doChain(i1,i2,i3,dir){anim=true;const d1=doms[i1],d2=doms[i2],d3=doms[i3];const nf1=grf(d1,dir==='h'?'left':'top'),nf2=grf(d3,dir==='h'?'right':'bottom');const maxSI=Math.max(SO.indexOf(d1.state),SO.indexOf(d2.state),SO.indexOf(d3.state));const ns=SO[Math.min(maxSI+2,SO.length-1)];if(ns!=='white'&&fc[ns]!==undefined){fc[ns]++;document.getElementById('c-'+ns).textContent=fc[ns];}const pts=addScore(PTS.chain,[d1.state,d2.state,d3.state]);const rect=G.children[i2].getBoundingClientRect();showFP(pts,rect.left+rect.width/2,rect.top);fusionAnim([i1,i2,i3],ns,()=>{doms[i2]={f1:nf1||IK[0],f2:nf2||IK[0],rot:d2.rot,state:ns};doms[i1]=null;doms[i3]=null;restoreCube(i1,0);restoreCube(i2,d2.rot);restoreCube(i3,0);render();setTimeout(()=>{anim=false;gravity();},FA);});}
-function doTwin(i1,i2,dir){anim=true;const d1=doms[i1],d2=doms[i2];fc.cosmic++;document.getElementById('c-cosmic').textContent=fc.cosmic;const pts=addScore(PTS.twin,[d1.state,d2.state]);const rect=G.children[i1].getBoundingClientRect();showFP(pts,rect.left+rect.width/2,rect.top);fusionAnim([i1,i2],'cosmic',()=>{doms[i1]={f1:d1.f1,f2:d1.f2,rot:d1.rot,state:'cosmic'};doms[i2]=null;restoreCube(i1,d1.rot);restoreCube(i2,0);render();setTimeout(()=>{anim=false;gravity();},FA);});}
+    function getDominoFromSequence(pos) {
+        const rng = seededRandom(12345);
+        const keys = Object.keys(ICONS);
+        for (let i = 0; i < pos; i++) { rng(); rng(); }
+        return newDominoData(keys[Math.floor(rng() * keys.length)], keys[Math.floor(rng() * keys.length)]);
+    }
 
-function gravity(cb){if(anim)return;anim=true;let moved=true;function go(){moved=false;for(let y=ROWS-2;y>=0;y--)for(let x=0;x<COLS;x++){const i=gi(x,y),iB=gi(x,y+1);if(doms[i]&&!doms[iB]){doms[iB]=doms[i];doms[i]=null;CS[iB].mat=CS[i].mat.map(r=>[...r]);CS[iB].el.style.transition='none';CS[iB].el.style.transform=m2css(CS[iB].mat);CS[i].mat=I();CS[i].el.style.transition='none';CS[i].el.style.transform=m2css(CS[i].mat);moved=true;}}render();if(moved)setTimeout(go,GD);else setTimeout(()=>{anim=false;if(cb)cb();else checkF();},200);}go();}
+    // ============================================================
+    // FACES EXPOSÉES
+    // rotY=0   front=face1, right=face2_alt, back=face2, left=face1_alt
+    //          top-exposed=face1, bottom-exposed=face2
+    // Pour fusion H: on compare exposed-right de d[i] avec exposed-left de d[i+1]
+    // exposed-right dépend de rotY:
+    //   rotY=0   → right face = face2  (face adjacente)
+    //   rotY=90  → right face = face1 (front rotated)
+    //   rotY=180 → right face = face1 (back rotated)
+    //   rotY=270 → right face = face2
+    //
+    // Simplifié : 
+    //   getVisibleFront(d) = rotY=0→face1, 90→face2, 180→face2, 270→face1
+    //   getExposedEdge(d, 'right') = face qui "pointe" vers droite pour fusion
+    //   getExposedEdge(d, 'left')  = face qui "pointe" vers gauche
+    //   getExposedEdge(d, 'top')   = face qui "pointe" vers haut
+    //   getExposedEdge(d, 'bottom')= face qui "pointe" vers bas
+    // ============================================================
 
-function save(){hist.push(JSON.parse(JSON.stringify(doms)));shist.push(score);matHist.push(CS.map(cs=>cs.mat.map(r=>[...r])));if(hist.length>MH){hist.shift();shist.shift();matHist.shift();}}
-function undo(){if(!hist.length||anim||lrot)return;doms=hist.pop();score=shist.pop();const mats=matHist.pop();for(let i=0;i<TOTAL;i++){CS[i].mat=mats[i];CS[i].el.style.transition='none';CS[i].el.style.transform=m2css(CS[i].mat);const ii=i;requestAnimationFrame(()=>{CS[ii].el.style.transition='transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';});}document.getElementById('score').textContent=score.toLocaleString();render();}
+    function getVisibleFront(d) {
+        const r = ((d.rotY % 360) + 360) % 360;
+        return (r === 0 || r === 270) ? d.face1 : d.face2;
+    }
 
-const SEEDS={1:12345,2:67890,3:24680,4:13579};
-function srng(seed){let s=seed;return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};}
-function resetGame(){if(anim||lrot)return;hist=[];shist=[];matHist=[];rq=[];score=0;combo=1;lastF=0;fc={silver:0,gold:0,emerald:0,cosmic:0};const rng=srng(SEEDS[lv]),keys=LICONS[lv]||LICONS[1];doms=Array.from({length:TOTAL},(_,i)=>{const{x,y}=gp(i);return{f1:keys[Math.floor(rng()*keys.length)],f2:keys[Math.floor(rng()*keys.length)],rot:((x+y)%2===0)?0:90,state:'white'};});CS.forEach((cs,i)=>{resetCubeMat(i,doms[i].rot);cs.state='white';});render();document.getElementById('score').textContent='0';document.getElementById('combo').textContent='×1';document.getElementById('combo').style.opacity='0.5';['silver','gold','emerald','cosmic'].forEach(s=>document.getElementById('c-'+s).textContent='0');}
-function setLevel(n){if(anim||lrot)return;lv=n;document.querySelectorAll('.lb').forEach((b,i)=>b.classList.toggle('active',i===n-1));resetGame();}
+    function getVisibleFrontState(d) {
+        const r = ((d.rotY % 360) + 360) % 360;
+        return (r === 0 || r === 270) ? (d.state1 || d.state) : (d.state2 || d.state);
+    }
 
-try{best=parseInt(localStorage.getItem('adam3d5c')||'0');document.getElementById('best').textContent=best.toLocaleString();}catch(e){}
-setInterval(()=>{try{localStorage.setItem('adam3d5c',best.toString());}catch(e){}},5000);
-buildGrid();resetGame();requestAnimationFrame(glowLoop);
-</script>
+    // Pour les fusions : la face "exposée" sur chaque côté
+    // On utilise rotY pour déterminer quelle face est tournée vers chaque direction
+    function getExposedEdge(d, dir) {
+        const r = ((d.rotY % 360) + 360) % 360;
+        // Horizontal: right/left basé sur rotation Y
+        const yMap = {
+            0:   { right: d.face2, left: d.face2 },
+            90:  { right: d.face1, left: d.face1 },
+            180: { right: d.face1, left: d.face1 },
+            270: { right: d.face2, left: d.face2 },
+        };
+        if (dir === 'right' || dir === 'left') return yMap[r]?.[dir] || d.face1;
+        // Vertical: top/bottom utilise face1 (haut) / face2 (bas) avec rotation X (pour l'instant fixe)
+        if (dir === 'top') return d.face1;
+        if (dir === 'bottom') return d.face2;
+    }
+
+    function getExposedEdgeState(d, dir) {
+        const r = ((d.rotY % 360) + 360) % 360;
+        const yMap = {
+            0:   { right: d.state2 || d.state, left: d.state2 || d.state },
+            90:  { right: d.state1 || d.state, left: d.state1 || d.state },
+            180: { right: d.state1 || d.state, left: d.state1 || d.state },
+            270: { right: d.state2 || d.state, left: d.state2 || d.state },
+        };
+        if (dir === 'right' || dir === 'left') return yMap[r]?.[dir] || d.state1 || d.state;
+        if (dir === 'top') return d.state1 || d.state;
+        if (dir === 'bottom') return d.state2 || d.state;
+    }
+
+    // ============================================================
+    // RENDU
+    // ============================================================
+    function buildCubeFaces(d) {
+        // 6 faces: front, back, right, left, top, bottom
+        // front = face1, back = face2
+        // right/left/top/bottom = demi-dominos (face1 haut + face2 bas)
+        // Les faces latérales montrent les deux icônes comme un domino complet
+        const f1 = d.face1, f2 = d.face2;
+        return [
+            { cls: 'face-front',  svg: makeFaceSVG(f1, false) },
+            { cls: 'face-back',   svg: makeFaceSVG(f2, true)  },
+            { cls: 'face-right',  svg: makeDominoFaceSVG(f1, f2) },
+            { cls: 'face-left',   svg: makeDominoFaceSVG(f2, f1) },
+            { cls: 'face-top',    svg: makeFaceSVG(f1, false) },
+            { cls: 'face-bottom', svg: makeFaceSVG(f2, true)  },
+        ];
+    }
+
+    function getCubeTransform(d) {
+        const rotY = d.rotY || 0;
+        const rotX = d.rotX || 0;
+        return `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    }
+
+    function getCubeStateClass(d) {
+        // L'état visuel = le plus haut entre state1 et state2
+        const s1 = d.state1 || d.state || 'white';
+        const s2 = d.state2 || d.state || 'white';
+        const idx1 = STATE_ORDER.indexOf(s1), idx2 = STATE_ORDER.indexOf(s2);
+        return STATE_ORDER[Math.max(idx1, idx2)];
+    }
+
+    function render() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        cubeEls = [];
+        CELL_SIZE = Math.min(80, window.innerWidth * 0.20);
+        CELL_TOTAL = CELL_SIZE;
+        GRID_WIDTH = COLS * CELL_TOTAL;
+        GRID_HEIGHT = ROWS * CELL_TOTAL;
+
+        for (let i = 0; i < TOTAL; i++) {
+            const col = i % COLS, row = Math.floor(i / COLS);
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.style.left = (col * CELL_TOTAL) + 'px';
+            cell.style.top = (row * CELL_TOTAL) + 'px';
+
+            const scene = document.createElement('div');
+            scene.className = 'scene';
+
+            const cube = document.createElement('div');
+            cube.dataset.index = i;
+
+            if (dominos[i]) {
+                const d = dominos[i];
+                const stateClass = getCubeStateClass(d);
+                cube.className = `cube ${stateClass}`;
+                cube.style.transform = getCubeTransform(d);
+
+                const faces = buildCubeFaces(d);
+                faces.forEach(f => {
+                    const faceEl = document.createElement('div');
+                    faceEl.className = 'cube-face ' + f.cls;
+                    faceEl.innerHTML = f.svg;
+                    cube.appendChild(faceEl);
+                });
+            } else {
+                cube.className = 'cube empty-cube';
+            }
+
+            scene.appendChild(cube);
+            cell.appendChild(scene);
+            grid.appendChild(cell);
+            cubeEls.push(cube);
+        }
+
+        // Réattacher events
+        attachPointerEvents();
+    }
+
+    // ============================================================
+    // POINTER EVENTS — swipe horizontal = rotation cube, vertical = scroll colonne
+    // ============================================================
+    function attachPointerEvents() {
+        const grid = document.getElementById('grid');
+        grid.addEventListener('pointerdown', onPointerDown);
+        grid.addEventListener('pointermove', onPointerMove);
+        grid.addEventListener('pointerup', onPointerUp);
+        grid.addEventListener('pointercancel', onPointerCancel);
+    }
+
+    function onPointerDown(e) {
+        if (isAnimating) return;
+        const target = e.target.closest('.cube');
+        if (!target || target.classList.contains('empty-cube')) return;
+        e.preventDefault();
+
+        const idx = parseInt(target.dataset.index);
+        swipeTargetCube = idx;
+        swipeStartX = e.clientX;
+        swipeStartY = e.clientY;
+        swipeMode = null;
+        dragStartTime = Date.now();
+        dragOffset = 0;
+        dragAxis = null;
+        initialPositions = [];
+
+        grid.setPointerCapture(e.pointerId);
+    }
+
+    let _grid_el = null;
+    function getGrid() { return _grid_el || (_grid_el = document.getElementById('grid')); }
+
+    function onPointerMove(e) {
+        if (swipeTargetCube === null) return;
+        if (isAnimating) return;
+        e.preventDefault();
+
+        const dx = e.clientX - swipeStartX;
+        const dy = e.clientY - swipeStartY;
+        const adx = Math.abs(dx), ady = Math.abs(dy);
+
+        if (swipeMode === null) {
+            if (Math.max(adx, ady) < 8) return;
+            // Axe dominant
+            if (adx >= ady) {
+                swipeMode = 'cube-rotate'; // swipe H → rotation cube Y
+            } else {
+                swipeMode = 'column-scroll';
+                // Init column scroll
+                const col = swipeTargetCube % COLS;
+                dragCol = col;
+                dragOffset = 0;
+                dragAxis = 'vertical';
+                initialPositions = [];
+                for (let r = 0; r < ROWS; r++) {
+                    const idx = r * COLS + col;
+                    initialPositions.push({ idx, baseY: r * CELL_TOTAL });
+                }
+                saveState();
+                createGhosts(col);
+            }
+        }
+
+        if (swipeMode === 'column-scroll') {
+            dragOffset = dy;
+            const col = dragCol;
+            for (const item of initialPositions) {
+                const cubeCell = cubeEls[item.idx]?.closest('.cell');
+                if (cubeCell) {
+                    cubeCell.style.transition = 'none';
+                    cubeCell.style.top = (item.baseY + dragOffset) + 'px';
+                }
+            }
+            ghostElements.forEach(g => {
+                g.el.style.top = (g.baseY + dragOffset) + 'px';
+            });
+        }
+    }
+
+    function onPointerUp(e) {
+        if (swipeTargetCube === null) return;
+        const dx = e.clientX - swipeStartX;
+        const dy = e.clientY - swipeStartY;
+        const adx = Math.abs(dx), ady = Math.abs(dy);
+        const elapsed = Date.now() - dragStartTime;
+
+        if (swipeMode === null || (adx < 12 && ady < 12)) {
+            // Tap → pas d'action spéciale
+            swipeTargetCube = null;
+            swipeMode = null;
+            return;
+        }
+
+        if (swipeMode === 'cube-rotate') {
+            // Rotation Y du cube selon direction
+            if (!isAnimating) {
+                const idx = swipeTargetCube;
+                if (dominos[idx]) {
+                    saveState();
+                    const dir = dx > 0 ? 1 : -1; // 1 = droite, -1 = gauche
+                    dominos[idx].rotY = ((dominos[idx].rotY + dir * 90) % 360 + 360) % 360;
+                    // Animer le cube
+                    const cubeEl = cubeEls[idx];
+                    if (cubeEl) {
+                        cubeEl.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                        cubeEl.style.transform = getCubeTransform(dominos[idx]);
+                    }
+                    setTimeout(() => {
+                        checkFusions();
+                    }, 420);
+                }
+            }
+        } else if (swipeMode === 'column-scroll') {
+            // Fin du scroll colonne
+            const steps = Math.round(dragOffset / CELL_TOTAL);
+            const col = dragCol;
+
+            // Animer vers snap
+            for (const item of initialPositions) {
+                const cubeCell = cubeEls[item.idx]?.closest('.cell');
+                if (!cubeCell) continue;
+                let currentY = item.baseY + dragOffset;
+                const originalRow = Math.round(item.baseY / CELL_TOTAL);
+                const newRow = ((originalRow + steps) % ROWS + ROWS) % ROWS;
+                const targetY = newRow * CELL_TOTAL;
+                while (currentY - targetY > ROWS * CELL_TOTAL / 2) currentY -= ROWS * CELL_TOTAL;
+                while (targetY - currentY > ROWS * CELL_TOTAL / 2) currentY += ROWS * CELL_TOTAL;
+                cubeCell.style.transition = 'none';
+                cubeCell.style.top = currentY + 'px';
+            }
+            getGrid().offsetHeight;
+            for (const item of initialPositions) {
+                const cubeCell = cubeEls[item.idx]?.closest('.cell');
+                if (!cubeCell) continue;
+                const originalRow = Math.round(item.baseY / CELL_TOTAL);
+                const newRow = ((originalRow + steps) % ROWS + ROWS) % ROWS;
+                cubeCell.style.transition = 'top 0.15s ease-out';
+                cubeCell.style.top = (newRow * CELL_TOTAL) + 'px';
+            }
+
+            // Update data
+            const newColDominos = [];
+            for (let r = 0; r < ROWS; r++) {
+                const sourceRow = ((r - steps) % ROWS + ROWS) % ROWS;
+                newColDominos[r] = dominos[sourceRow * COLS + col];
+            }
+            for (let r = 0; r < ROWS; r++) {
+                dominos[r * COLS + col] = newColDominos[r];
+            }
+            clearGhosts();
+            setTimeout(() => { render(); checkFusions(); }, 180);
+        }
+
+        swipeTargetCube = null;
+        swipeMode = null;
+        dragAxis = null;
+        initialPositions = [];
+    }
+
+    function onPointerCancel(e) {
+        clearGhosts();
+        swipeTargetCube = null; swipeMode = null; dragAxis = null; initialPositions = [];
+    }
+
+    // ============================================================
+    // GHOSTS pour scroll colonne
+    // ============================================================
+    function createGhosts(col) {
+        clearGhosts();
+        const grid = getGrid();
+        for (let r = 0; r < ROWS; r++) {
+            const idx = r * COLS + col;
+            const d = dominos[idx];
+            if (!d) continue;
+            const stateClass = getCubeStateClass(d);
+
+            [-1, 1].forEach(dir => {
+                const ghost = document.createElement('div');
+                ghost.className = 'cell';
+                ghost.style.position = 'absolute';
+                ghost.style.left = (col * CELL_TOTAL) + 'px';
+                const baseY = r * CELL_TOTAL + dir * ROWS * CELL_TOTAL;
+                ghost.style.top = baseY + 'px';
+                ghost.style.width = CELL_SIZE + 'px';
+                ghost.style.height = CELL_SIZE + 'px';
+                ghost.style.pointerEvents = 'none';
+                ghost.style.opacity = '0.6';
+
+                const scene = document.createElement('div');
+                scene.className = 'scene';
+                const cube = document.createElement('div');
+                cube.className = `cube ${stateClass}`;
+                cube.style.transform = getCubeTransform(d);
+                buildCubeFaces(d).forEach(f => {
+                    const faceEl = document.createElement('div');
+                    faceEl.className = 'cube-face ' + f.cls;
+                    faceEl.innerHTML = f.svg;
+                    cube.appendChild(faceEl);
+                });
+                scene.appendChild(cube);
+                ghost.appendChild(scene);
+                grid.appendChild(ghost);
+                ghostElements.push({ el: ghost, baseY });
+            });
+        }
+    }
+
+    function clearGhosts() {
+        ghostElements.forEach(g => g.el.remove());
+        ghostElements = [];
+    }
+
+    // ============================================================
+    // FUSION LOGIC
+    // ============================================================
+    function checkFusions() {
+        if (isAnimating) return;
+
+        // Simple fusion H
+        for (let i = 0; i < TOTAL; i++) {
+            if (!dominos[i]) continue;
+            const { x, y } = getPos(i);
+            const iR = getIndex(x+1, y);
+            if (iR !== -1 && dominos[iR]) {
+                const fL = getExposedEdge(dominos[i], 'right');
+                const fR = getExposedEdge(dominos[iR], 'left');
+                const sL = getExposedEdgeState(dominos[i], 'right');
+                const sR = getExposedEdgeState(dominos[iR], 'left');
+                if (fL && fR && fL === fR && sL === sR) {
+                    performFusion(i, iR, 'h'); return;
+                }
+            }
+            const iB = getIndex(x, y+1);
+            if (iB !== -1 && dominos[iB]) {
+                const fT = getExposedEdge(dominos[i], 'bottom');
+                const fB = getExposedEdge(dominos[iB], 'top');
+                const sT = getExposedEdgeState(dominos[i], 'bottom');
+                const sB = getExposedEdgeState(dominos[iB], 'top');
+                if (fT && fB && fT === fB && sT === sB) {
+                    performFusion(i, iB, 'v'); return;
+                }
+            }
+        }
+        applyGravity();
+    }
+
+    function performFusion(idx1, idx2, dir) {
+        isAnimating = true;
+        const d1 = dominos[idx1], d2 = dominos[idx2];
+        const el1 = cubeEls[idx1], el2 = cubeEls[idx2];
+        if (!el1 || !el2) { isAnimating = false; return; }
+
+        // Faces qui fusionnent
+        const fuseFace = dir === 'h' ? getExposedEdge(d1, 'right') : getExposedEdge(d1, 'bottom');
+        // Face restante de chaque cube (l'autre face)
+        const remain1 = (d1.face1 === fuseFace) ? d1.face2 : d1.face1;
+        const remain2 = (d2.face1 === fuseFace) ? d2.face2 : d2.face1;
+
+        const currentState = getExposedEdgeState(d1, dir === 'h' ? 'right' : 'bottom');
+        const currentIdx = STATE_ORDER.indexOf(currentState);
+        const nextState = STATE_ORDER[Math.min(currentIdx + 1, STATE_ORDER.length - 1)];
+
+        // Points
+        const points = addScore(POINTS.simple, [d1.state, d2.state]);
+        const rect = el1.getBoundingClientRect();
+        showFloatingPoints(points, rect.left + rect.width/2, rect.top);
+
+        // Animation fusing
+        el1.classList.add('fusing'); el2.classList.add('fusing');
+
+        // Effet de rotation du cube fusionné
+        const targetRotY = (d1.rotY + 180) % 360;
+        el1.style.transition = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.35s';
+        el1.style.transform = `rotateX(${d1.rotX||0}deg) rotateY(${targetRotY}deg) scale(1.15)`;
+        el2.style.transition = 'transform 0.35s, opacity 0.35s';
+        el2.style.transform = `scale(0.1)`;
+        el2.style.opacity = '0';
+
+        setTimeout(() => {
+            // Résultat : idx1 garde les faces restantes montées en état
+            dominos[idx1] = newDominoData(remain1, remain2, 'white');
+            dominos[idx1].state1 = nextState;
+            dominos[idx1].state2 = nextState;
+            dominos[idx2] = null;
+
+            // Jumeau qui respawn
+            const twin = newDominoData(fuseFace, fuseFace, 'white');
+
+            render();
+            setTimeout(() => {
+                isAnimating = false;
+                applyGravityThenRespawn([twin]);
+            }, FUSION_APPEAR);
+        }, FUSION_MOVE);
+    }
+
+    function applyGravity() {
+        let moved = false;
+        for (let x = 0; x < COLS; x++) {
+            for (let y = ROWS - 2; y >= 0; y--) {
+                const idx = getIndex(x, y);
+                const below = getIndex(x, y+1);
+                if (dominos[idx] && !dominos[below]) {
+                    dominos[below] = dominos[idx];
+                    dominos[idx] = null;
+                    moved = true;
+                }
+            }
+        }
+        if (moved) { render(); setTimeout(applyGravity, 80); }
+        else checkFusions();
+    }
+
+    function applyGravityThenRespawn(twins) {
+        // Gravité d'abord
+        let moved = false;
+        for (let x = 0; x < COLS; x++) {
+            for (let y = ROWS - 2; y >= 0; y--) {
+                const idx = getIndex(x, y);
+                const below = getIndex(x, y+1);
+                if (dominos[idx] && !dominos[below]) {
+                    dominos[below] = dominos[idx];
+                    dominos[idx] = null;
+                    moved = true;
+                }
+            }
+        }
+        if (moved) { render(); }
+        // Respawn jumeaux
+        let spawned = 0;
+        for (let x = 0; x < COLS && spawned < twins.length; x++) {
+            const topIdx = getIndex(x, 0);
+            if (!dominos[topIdx]) {
+                dominos[topIdx] = twins[spawned++];
+            }
+        }
+        render();
+        setTimeout(() => { checkFusions(); }, 100);
+    }
+
+    // ============================================================
+    // SCORE
+    // ============================================================
+    function addScore(basePoints, states) {
+        const now = Date.now();
+        let stateMultiplier = 1;
+        states.forEach(s => { stateMultiplier = Math.max(stateMultiplier, STATE_MULTIPLIER[s] || 1); });
+        if (now - lastFusionTime < 2000 && lastFusionTime > 0) comboCount++;
+        else comboCount = 1;
+        lastFusionTime = now;
+        const comboMultiplier = 1 + (comboCount - 1) * 0.5;
+        const points = Math.round(basePoints * stateMultiplier * comboMultiplier);
+        score += points;
+        if (score > bestScore) bestScore = score;
+        updateScoreDisplay();
+        return points;
+    }
+
+    function updateScoreDisplay() {
+        const sc = document.getElementById('score');
+        sc.textContent = score.toLocaleString();
+        sc.classList.remove('highlight'); void sc.offsetWidth; sc.classList.add('highlight');
+        document.getElementById('combo').textContent = comboCount > 1 ? `×${(1 + (comboCount-1)*0.5).toFixed(1)}` : '×1';
+        document.getElementById('combo').style.opacity = comboCount > 1 ? '1' : '0.5';
+        document.getElementById('best').textContent = bestScore.toLocaleString();
+    }
+
+    function showFloatingPoints(points, x, y) {
+        const el = document.createElement('div');
+        el.className = 'floating-points';
+        el.textContent = `+${points.toLocaleString()}`;
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    // ============================================================
+    // UNDO / RESET
+    // ============================================================
+    function saveState() {
+        history.push(JSON.parse(JSON.stringify(dominos)));
+        scoreHistory.push(score);
+        if (history.length > 30) { history.shift(); scoreHistory.shift(); }
+    }
+
+    function undoAction() {
+        if (history.length === 0 || isAnimating) return;
+        dominos = history.pop();
+        score = scoreHistory.pop();
+        render();
+        updateScoreDisplay();
+    }
+
+    function resetGame() {
+        if (isAnimating) return;
+        history = []; scoreHistory = [];
+        score = 0; comboCount = 0; lastFusionTime = 0;
+        dominoSequenceIndex = 1;
+        const rng = seededRandom(12345);
+        const keys = Object.keys(ICONS);
+        dominos = Array.from({ length: TOTAL }, () =>
+            newDominoData(keys[Math.floor(rng() * keys.length)], keys[Math.floor(rng() * keys.length)])
+        );
+        render();
+        updateScoreDisplay();
+    }
+
+    // ============================================================
+    // GLOW DYNAMIQUE (faces frontales brillent selon orientation)
+    // ============================================================
+    function animateGlow() {
+        cubeEls.forEach((cubeEl, idx) => {
+            if (!cubeEl || cubeEl.classList.contains('empty-cube')) return;
+            const frontFace = cubeEl.querySelector('.face-front');
+            if (!frontFace) return;
+            const d = dominos[idx];
+            if (!d) return;
+            const stateClass = getCubeStateClass(d);
+            if (stateClass === 'white') {
+                frontFace.style.boxShadow = '0 0 8px rgba(180,180,190,0.1), inset 0 0 8px rgba(180,180,190,0.03)';
+            }
+            // Les autres états ont leurs propres animations CSS
+        });
+        requestAnimationFrame(animateGlow);
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    resetGame();
+    requestAnimationFrame(animateGlow);
+
+    // Resize
+    window.addEventListener('resize', () => { render(); });
+
+    </script>
 </body>
 </html>
