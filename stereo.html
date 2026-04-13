@@ -2,877 +2,664 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADAM — Cube Grid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ADAM — Cylinder of Cubes v1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; overflow: hidden; touch-action: none; }
 
         body {
-            background-color: #0c0d14;
+            background: #08090e;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
 
-        /* ── LOGO ── */
-        .logo { display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 10px; }
-        .logo-icon { width: 32px; height: 32px; }
-        .logo-icon svg { width: 100%; height: 100%; }
-        .logo-icon svg path, .logo-icon svg line, .logo-icon svg rect, .logo-icon svg polygon {
-            stroke: rgba(126,200,227,0.7); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none;
-            filter: drop-shadow(0 0 6px rgba(126,200,227,0.4));
-        }
-
-        /* ── SCORE ── */
-        .score-bar {
-            display: flex; align-items: center; gap: 16px;
-            margin-bottom: 14px;
-            color: rgba(126,200,227,0.5);
-            font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
-        }
-        .score-val { color: rgba(220,220,230,0.85); font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; }
-        .score-val.flash { animation: scoreFlash 0.4s ease-out; }
-        @keyframes scoreFlash { 0%{color:#ffd700;transform:scale(1.25)} 100%{color:rgba(220,220,230,0.85);transform:scale(1)} }
-        .combo-val { color: #34d399 !important; }
-
-        /* ── GRILLE ── */
-        .grid-wrap {
-            display: grid;
-            grid-template-columns: repeat(4, var(--cell));
-            grid-template-rows: repeat(6, var(--cell));
-            gap: var(--gap);
-            --cell: min(72px, 19vw);
-            --gap: 7px;
-        }
-
-        /* ── CELLULE ── */
-        .cell {
-            width: var(--cell);
-            height: var(--cell);
-            perspective: 380px;
+        .container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 860px;
+            background: linear-gradient(180deg, #0a0b12 0%, #12142a 50%, #0a0b12 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             position: relative;
+            overflow: hidden;
         }
 
-        /* ── CUBE (domino 3D) ── */
-        .cube {
+        /* Ambiance particles */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(ellipse 600px 200px at 50% 40%, rgba(126,200,227,0.04) 0%, transparent 70%),
+                radial-gradient(ellipse 300px 300px at 30% 60%, rgba(90,140,220,0.03) 0%, transparent 60%);
+            pointer-events: none;
+            animation: ambientDrift 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes ambientDrift {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(10px, -15px) rotate(2deg); }
+        }
+
+        .title {
+            position: absolute;
+            top: 30px;
+            font-size: 11px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: rgba(126,200,227,0.35);
+            font-weight: 300;
+        }
+
+        .scene {
+            width: 320px;
+            height: 480px;
+            perspective: 800px;
+            perspective-origin: 50% 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cylinder {
+            width: 0;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transform-origin: center center;
+        }
+
+        .crown {
+            position: absolute;
+            width: 0;
+            left: 0;
+            height: 90px;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease-out;
+        }
+
+        .crown.dragging { transition: none; }
+        .crown.auto-rotating { transition: none; }
+
+        /* Mini-cube wrapper */
+        .cube-cell {
+            position: absolute;
+            width: 68px;
+            height: 68px;
+            left: -34px;
+            top: 11px;
+            perspective: 400px;
+            backface-visibility: visible;
+            cursor: pointer;
+        }
+
+        .mini-cube {
             width: 100%;
             height: 100%;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        /* ── FACE ── */
+        .mini-cube.spinning {
+            transition: transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
         .face {
             position: absolute;
-            width: var(--cell);
-            height: var(--cell);
-            border-radius: 12px;
+            width: 68px;
+            height: 68px;
+            border-radius: 10px;
             overflow: hidden;
             backface-visibility: hidden;
-            background: #0e0f18;
-            border: 1px solid rgba(126,200,227,0.35);
-            box-shadow: 0 0 20px rgba(126,200,227,0.06), inset 0 0 24px rgba(126,200,227,0.03);
-            display: flex; align-items: center; justify-content: center;
-            transition: box-shadow 0.15s, border-color 0.15s;
+            background: rgba(10, 12, 22, 0.92);
+            border: 1px solid rgba(126, 200, 227, 0.25);
+            box-shadow:
+                0 0 12px rgba(126, 200, 227, 0.05),
+                inset 0 0 20px rgba(126, 200, 227, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .face .icon-stack { position: relative; width: 100%; height: 100%; }
         .face svg {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; display: block;
+            width: 100%;
+            height: 100%;
+            display: block;
         }
-        .face svg line.icon, .face svg path.icon, .face svg circle.icon, .face svg rect.icon {
-            stroke: #7ec8e3; stroke-width: 2;
-            stroke-linecap: round; stroke-linejoin: round; fill: none;
-            filter: drop-shadow(0 0 4px rgba(126,200,227,0.5));
+
+        .face-front  { transform: rotateY(0deg)    translateZ(34px); }
+        .face-back   { transform: rotateY(180deg)   translateZ(34px); }
+        .face-right  { transform: rotateY(90deg)    translateZ(34px); }
+        .face-left   { transform: rotateY(-90deg)   translateZ(34px); }
+        .face-top    { transform: rotateX(90deg)    translateZ(34px); }
+        .face-bottom { transform: rotateX(-90deg)   translateZ(34px); }
+
+        .face svg .separator { stroke: rgba(126,200,227,0.25); stroke-width: 0.6; }
+        .face svg line.icon, .face svg path.icon,
+        .face svg circle.icon, .face svg rect.icon {
+            stroke: #7ec8e3;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            filter: drop-shadow(0 0 3px rgba(126,200,227,0.4));
         }
         .face svg circle.point {
-            fill: #7ec8e3; stroke: none;
-            filter: drop-shadow(0 0 4px rgba(126,200,227,0.5));
+            fill: #7ec8e3;
+            stroke: none;
+            filter: drop-shadow(0 0 3px rgba(126,200,227,0.4));
         }
 
-        /* Positions des 6 faces — demi-cellule en translateZ */
-        .face-front  { transform: rotateY(0deg)   translateZ(calc(var(--cell) / 2)); }
-        .face-back   { transform: rotateY(180deg)  translateZ(calc(var(--cell) / 2)); }
-        .face-right  { transform: rotateY(90deg)   translateZ(calc(var(--cell) / 2)); }
-        .face-left   { transform: rotateY(-90deg)  translateZ(calc(var(--cell) / 2)); }
-        .face-top    { transform: rotateX(90deg)   translateZ(calc(var(--cell) / 2)); }
-        .face-bottom { transform: rotateX(-90deg)  translateZ(calc(var(--cell) / 2)); }
-
-        /* ── ÉTATS ── */
-        /* WHITE : style de base déjà défini */
-
-        /* SILVER */
-        .state-silver .face-front {
-            border-color: rgba(34,211,238,0.65);
-            box-shadow: 0 0 18px rgba(34,211,238,0.25), inset 0 0 18px rgba(34,211,238,0.06);
-        }
-        .state-silver .face-front svg line.icon, .state-silver .face-front svg path.icon,
-        .state-silver .face-front svg circle.icon, .state-silver .face-front svg rect.icon { stroke: #22d3ee; filter: drop-shadow(0 0 3px rgba(34,211,238,0.6)); }
-        .state-silver .face-front svg circle.point { fill: #22d3ee; filter: drop-shadow(0 0 3px rgba(34,211,238,0.6)); }
-
-        /* GOLD */
-        .state-gold .face-front {
-            border-color: rgba(255,215,0,0.75);
-            box-shadow: 0 0 24px rgba(255,215,0,0.35), inset 0 0 22px rgba(255,215,0,0.06);
-        }
-        .state-gold .face-front svg line.icon, .state-gold .face-front svg path.icon,
-        .state-gold .face-front svg circle.icon, .state-gold .face-front svg rect.icon { stroke: #ffd700; filter: drop-shadow(0 0 4px rgba(255,215,0,0.65)); }
-        .state-gold .face-front svg circle.point { fill: #ffd700; filter: drop-shadow(0 0 4px rgba(255,215,0,0.65)); }
-
-        /* EMERALD */
-        .state-emerald .face-front {
-            border-color: rgba(52,211,153,0.9);
-            box-shadow: 0 0 28px rgba(5,150,105,0.5), 0 0 42px rgba(52,211,153,0.28), inset 0 0 26px rgba(52,211,153,0.08);
-            animation: emeraldGlow 2.5s ease-in-out infinite;
-        }
-        .state-emerald .face-front svg line.icon, .state-emerald .face-front svg path.icon,
-        .state-emerald .face-front svg circle.icon, .state-emerald .face-front svg rect.icon { stroke: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.9)) drop-shadow(0 0 12px rgba(5,150,105,0.5)); }
-        .state-emerald .face-front svg circle.point { fill: #34d399; filter: drop-shadow(0 0 6px rgba(52,211,153,0.9)); }
-        @keyframes emeraldGlow {
-            0%,100% { box-shadow: 0 0 28px rgba(5,150,105,0.5), 0 0 42px rgba(52,211,153,0.28), inset 0 0 26px rgba(52,211,153,0.08); }
-            50%      { box-shadow: 0 0 40px rgba(5,150,105,0.7), 0 0 58px rgba(52,211,153,0.38), inset 0 0 36px rgba(52,211,153,0.13); }
+        /* Glow on front-facing cubes */
+        .cube-cell.front-facing .face {
+            border-color: rgba(126, 200, 227, 0.5);
+            box-shadow:
+                0 0 20px rgba(126, 200, 227, 0.12),
+                0 0 8px rgba(126, 200, 227, 0.08),
+                inset 0 0 20px rgba(126, 200, 227, 0.06);
         }
 
-        /* COSMIC */
-        @property --ca { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        .state-cosmic .face-front {
-            border: 2px solid transparent;
-            background: linear-gradient(#0e0f18,#0e0f18) padding-box,
-                        conic-gradient(from var(--ca,0deg),#ff006e,#8338ec,#06b6d4,#34d399,#ffd700,#ff006e) border-box;
-            box-shadow: 0 0 40px rgba(131,56,236,0.65), 0 0 60px rgba(255,0,110,0.32), inset 0 0 40px rgba(131,56,236,0.14);
-            animation: cosmicRot 4s linear infinite, cosmicPulse 2s ease-in-out infinite;
-        }
-        .state-cosmic .face-front svg line.icon, .state-cosmic .face-front svg path.icon,
-        .state-cosmic .face-front svg circle.icon, .state-cosmic .face-front svg rect.icon {
-            stroke: #c4b5fd; filter: drop-shadow(0 0 8px rgba(131,56,236,0.9)) drop-shadow(0 0 12px rgba(255,0,110,0.6));
-            animation: cosmicShift 3s ease-in-out infinite;
-        }
-        .state-cosmic .face-front svg circle.point { fill: #c4b5fd; filter: drop-shadow(0 0 8px rgba(131,56,236,0.9)); animation: cosmicPt 1.5s ease-in-out infinite; }
-        @keyframes cosmicRot   { to { --ca: 360deg; } }
-        @keyframes cosmicPulse { 0%,100%{box-shadow:0 0 40px rgba(131,56,236,0.65),0 0 60px rgba(255,0,110,0.32),inset 0 0 40px rgba(131,56,236,0.14)} 50%{box-shadow:0 0 55px rgba(131,56,236,0.85),0 0 80px rgba(255,0,110,0.5),inset 0 0 52px rgba(131,56,236,0.2)} }
-        @keyframes cosmicShift { 0%,100%{stroke:#c4b5fd} 33%{stroke:#22d3ee} 66%{stroke:#f472b6} }
-        @keyframes cosmicPt    { 0%,100%{fill:#c4b5fd} 50%{fill:#f472b6} }
-
-        /* ── CELL VIDE ── */
-        .cell.empty .face-front {
-            border-style: dashed;
-            border-color: rgba(126,200,227,0.12);
-            background: transparent;
-            box-shadow: none;
+        .swipe-zone {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
         }
 
-        /* ── FUSION ANIMATION ── */
-        .cell.fusing .cube { animation: fusePop 0.38s ease-out; }
-        @keyframes fusePop {
-            0%   { filter: brightness(4); transform: scale(1.15); }
-            60%  { filter: brightness(1.5); }
-            100% { filter: brightness(1); }
+        .swipe-zone:active { cursor: grabbing; }
+
+        .hint {
+            color: rgba(126,200,227,0.25);
+            font-size: 11px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
         }
 
-        /* ── ROTATION LOCALE (clic) ── */
-        .cell.spinning .cube { /* géré via JS */ }
-
-        /* ── CONTROLS ── */
-        .controls {
-            display: flex; gap: 8px; margin-top: 12px;
-            width: calc(var(--cell) * 4 + var(--gap) * 3);
-            --cell: min(72px, 19vw); --gap: 7px;
-            justify-content: space-between;
+        /* Tap feedback */
+        .mini-cube.tap-flash .face {
+            border-color: rgba(126, 200, 227, 0.8) !important;
+            box-shadow: 0 0 30px rgba(126, 200, 227, 0.3) !important;
+            transition: border-color 0.1s, box-shadow 0.1s;
         }
-        .level-selector { display: flex; gap: 6px; }
-        button {
-            background: transparent; border: 1px solid rgba(126,200,227,0.25);
-            color: rgba(126,200,227,0.55); padding: 7px 13px; border-radius: 8px;
-            cursor: pointer; font-size: 0.68rem; letter-spacing: 0.06em; transition: all 0.2s;
-        }
-        button:hover { border-color: rgba(126,200,227,0.5); color: rgba(126,200,227,0.9); }
-        button.active { border-color: rgba(52,211,153,0.65); color: #34d399; }
-
-        /* ── FLOATING POINTS ── */
-        .fp {
-            position: fixed; pointer-events: none; font-size: 1rem; font-weight: 700;
-            color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.8);
-            animation: fpUp 0.9s ease-out forwards; z-index: 1000;
-        }
-        @keyframes fpUp { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-55px) scale(1.2)} }
-
-        .hint { color: rgba(180,180,190,0.18); font-size: 0.55rem; letter-spacing: 0.1em; margin-top: 8px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<div class="logo">
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><path d="M8 26L18 10L28 26"/></svg></div>
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><polygon points="10,10 26,18 10,26"/></svg></div>
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><path d="M8 26L18 10L28 26"/></svg></div>
-    <div class="logo-icon"><svg viewBox="0 0 36 36"><line x1="10" y1="8" x2="10" y2="28"/><line x1="18" y1="8" x2="18" y2="28"/><line x1="26" y1="8" x2="26" y2="28"/></svg></div>
-</div>
-
-<div class="score-bar">
-    <span>Score</span><span class="score-val" id="score">0</span>
-    <span>Combo</span><span class="score-val combo-val" id="combo">×1</span>
-    <span>Best</span><span class="score-val" id="best">0</span>
-</div>
-
-<div class="grid-wrap" id="grid"></div>
-
-<div class="controls">
-    <div class="level-selector">
-        <button class="active" onclick="setLevel(1)">1</button>
-        <button onclick="setLevel(2)">2</button>
-        <button onclick="setLevel(3)">3</button>
-        <button onclick="setLevel(4)">4</button>
+    <div class="container">
+        <div class="title">A D A M · C Y L I N D E R</div>
+        <div class="scene" id="scene">
+            <div class="cylinder" id="cylinder"></div>
+        </div>
+        <div class="swipe-zone" id="swipeZone">
+            <div class="hint">← swipe →</div>
+        </div>
     </div>
-    <button onclick="undoAction()">Undo</button>
-    <button onclick="resetGame()">Reset</button>
-</div>
 
-<div class="hint">swipe diagonal = rotation groupe · tap = rotation domino · swipe h/v = tourner cube</div>
+    <script>
+        // =====================================================
+        // CONSTANTES
+        // =====================================================
+        const FACES = 8;
+        const ROWS = 5;
+        const RADIUS = 130;
+        const ANGLE_STEP = 360 / FACES; // 45°
+        const PERSPECTIVE = 800;
+        const INITIAL_ROTATION = ANGLE_STEP / 2;
+        const CROWN_HEIGHT = 90;
 
-<script>
-// ══════════════════════════════════════════════════════════
-//  ICÔNES (reprises v14 + v10b)
-// ══════════════════════════════════════════════════════════
+        // =====================================================
+        // DOMINO SYMBOLS (from domino-cube)
+        // =====================================================
+        const DOMINOS = [
+            [`<path class="icon" d="M 20 32 L 45 12 L 70 32"/>`,
+             `<circle class="icon" cx="45" cy="22" r="12"/>`],
+            [`<path class="icon" d="M 10 30 Q 28 8 45 22 Q 62 36 80 14"/>`,
+             `<circle class="point" cx="45" cy="12" r="4"/><circle class="point" cx="30" cy="32" r="4"/><circle class="point" cx="60" cy="32" r="4"/>`],
+            [`<circle class="icon" cx="30" cy="22" r="8"/><circle class="icon" cx="60" cy="22" r="8"/>`,
+             `<line class="icon" x1="25" y1="10" x2="25" y2="34"/><line class="icon" x1="45" y1="10" x2="45" y2="34"/><line class="icon" x1="65" y1="10" x2="65" y2="34"/>`],
+            [`<path class="icon" d="M 45 8 L 70 22 L 45 36 L 20 22 Z"/>`,
+             `<line class="icon" x1="15" y1="22" x2="75" y2="22"/>`],
+            [`<path class="icon" d="M 45 8 L 70 36 L 20 36 Z"/>`,
+             `<path class="icon" d="M 10 30 L 25 10 L 45 30 L 65 10 L 80 30"/>`],
+            [`<circle class="point" cx="30" cy="14" r="4"/><circle class="point" cx="60" cy="14" r="4"/><circle class="point" cx="30" cy="30" r="4"/><circle class="point" cx="60" cy="30" r="4"/>`,
+             `<rect class="icon" x="25" y="8" width="40" height="28" rx="3"/>`],
+            [`<line class="icon" x1="20" y1="32" x2="70" y2="12"/><line class="icon" x1="20" y1="12" x2="70" y2="32"/>`,
+             `<circle class="icon" cx="45" cy="22" r="16"/><circle class="point" cx="45" cy="22" r="3"/>`],
+            [`<path class="icon" d="M 25 10 L 25 34 L 65 34"/>`,
+             `<path class="icon" d="M 20 22 Q 45 4 70 22 Q 45 40 20 22"/>`],
+        ];
 
-const ICONS = {
-    chevron:    { f1:'M20 32L45 12L70 32', f2:'M20 12L45 32L70 12', t:'path' },
-    circle:     { f1:'45,22,12', f2:'45,22,12', t:'circle' },
-    twoCircles: { f1:'30,22,8|60,22,8', f2:'30,22,8|60,22,8', t:'circles' },
-    line:       { f1:'15,22,75,22', f2:'15,22,75,22', t:'line' },
-    threeLines: { f1:'25,10,25,34|45,10,45,34|65,10,65,34', f2:'25,10,25,34|45,10,45,34|65,10,65,34', t:'lines' },
-    twoPoints:  { f1:'30,22,4|60,22,4', f2:'30,22,4|60,22,4', t:'points' },
-    square:     { f1:'25,10,40,24,3', f2:'25,10,40,24,3', t:'rect' },
-    wave:       { f1:'M10 22Q28 6 45 22Q62 38 80 22', f2:'M10 22Q28 6 45 22Q62 38 80 22', t:'path' },
-    // niveau 2
-    twoL:       { f1:'M15 10L15 22L27 22', f2:'M75 10L75 22L63 22', t:'path' },
-    arc:        { f1:'M20 30Q45 8 70 30', f2:'M20 14Q45 36 70 14', t:'path' },
-    twoSquares: { f1:'24,14,12,12,2|54,14,12,12,2', f2:'24,14,12,12,2|54,14,12,12,2', t:'rects' },
-    target:     { f1:'45,22,12|45,22,4', f2:'45,22,12|45,22,4', t:'target' },
-    dumbbell:   { f1:'30,22,5|60,22,5|30,22,60,22', f2:'30,22,5|60,22,5|30,22,60,22', t:'dumbbell' },
-    singleLine: { f1:'45,10,45,34', f2:'45,10,45,34', t:'line' },
-    singlePoint:{ f1:'45,22,5', f2:'45,22,5', t:'circle' },
-    diamond:    { f1:'M45 10L60 22L45 34L30 22Z', f2:'M45 10L60 22L45 34L30 22Z', t:'path' },
-};
+        // Face config for each cube: [dominoIdx, showTop, showBottom] or null
+        function generateCubeFaces(seed) {
+            const faces = [];
+            for (let i = 0; i < 6; i++) {
+                const r = (seed * 7 + i * 13) % 17;
+                if (r < 3) {
+                    faces.push(null); // empty face
+                } else {
+                    const dIdx = (seed + i * 3) % DOMINOS.length;
+                    const showTop = r % 3 !== 0;
+                    const showBottom = r % 4 !== 0;
+                    faces.push([dIdx, showTop, showBottom || !showTop]);
+                }
+            }
+            return faces;
+        }
 
-const LEVEL_ICONS = {
-    1: ['chevron','circle','twoCircles','line','threeLines','twoPoints','square','wave'],
-    2: ['twoL','arc','twoSquares','target','dumbbell','singleLine','singlePoint','diamond'],
-    3: ['chevron','circle','twoCircles','line','threeLines','twoPoints','square','wave'],
-    4: ['chevron','circle','twoCircles','line','threeLines','twoPoints','square','wave'],
-};
+        function buildFaceSVG(faceData) {
+            if (!faceData) return `<svg viewBox="0 0 90 90"></svg>`;
+            const [dominoIdx, showTop, showBottom] = faceData;
+            const pair = DOMINOS[dominoIdx];
+            const sep = (showTop && showBottom) ? `<line class="separator" x1="0" y1="45" x2="90" y2="45"/>` : '';
+            const top = showTop ? `<g>${pair[0]}</g>` : '';
+            const bot = showBottom ? `<g transform="translate(0, 45)">${pair[1]}</g>` : '';
+            return `<svg viewBox="0 0 90 90">${sep}${top}${bot}</svg>`;
+        }
 
-function renderIcon(icon, isFace2) {
-    const d = ICONS[icon]; if (!d) return '';
-    const data = isFace2 ? d.f2 : d.f1;
-    if (d.t==='path')    return `<path class="icon" d="${data}"/>`;
-    if (d.t==='circle')  { const[cx,cy,r]=data.split(','); return `<circle class="icon" cx="${cx}" cy="${cy}" r="${r}"/>`; }
-    if (d.t==='line')    { const[x1,y1,x2,y2]=data.split(','); return `<line class="icon" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }
-    if (d.t==='rect')    { const[x,y,w,h,rx]=data.split(','); return `<rect class="icon" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`; }
-    if (d.t==='rects')   return data.split('|').map(p=>{const[x,y,w,h,rx]=p.split(',');return `<rect class="icon" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;}).join('');
-    if (d.t==='target')  { const[p1,p2]=data.split('|'); const[cx1,cy1,r1]=p1.split(','); const[cx2,cy2,r2]=p2.split(','); return `<circle class="icon" cx="${cx1}" cy="${cy1}" r="${r1}"/><circle class="point" cx="${cx2}" cy="${cy2}" r="${r2}"/>`; }
-    if (d.t==='dumbbell'){ const[p1,p2,p3]=data.split('|'); const[cx1,cy1,r1]=p1.split(','); const[cx2,cy2,r2]=p2.split(','); const[x1,y1,x2,y2]=p3.split(','); return `<circle class="point" cx="${cx1}" cy="${cy1}" r="${r1}"/><circle class="point" cx="${cx2}" cy="${cy2}" r="${r2}"/><line class="icon" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }
-    return data.split('|').map(p=>{
-        const v=p.split(',');
-        return (d.t==='circles'||d.t==='points')
-            ? `<circle class="${d.t==='points'?'point':'icon'}" cx="${v[0]}" cy="${v[1]}" r="${v[2]}"/>`
-            : `<line class="icon" x1="${v[0]}" y1="${v[1]}" x2="${v[2]}" y2="${v[3]}"/>`;
-    }).join('');
-}
+        // =====================================================
+        // ROTATION MATRICES (from domino-cube)
+        // =====================================================
+        function rotX90()  { return [[ 1, 0, 0],[ 0, 0,-1],[ 0, 1, 0]]; }
+        function rotXn90() { return [[ 1, 0, 0],[ 0, 0, 1],[ 0,-1, 0]]; }
+        function rotY90()  { return [[ 0, 0, 1],[ 0, 1, 0],[-1, 0, 0]]; }
+        function rotYn90() { return [[ 0, 0,-1],[ 0, 1, 0],[ 1, 0, 0]]; }
+        function rotZn90() { return [[ 0, 1, 0],[-1, 0, 0],[ 0, 0, 1]]; }
+        function rotZ90()  { return [[ 0,-1, 0],[ 1, 0, 0],[ 0, 0, 1]]; }
 
-// Rendu d'une face : 2 icônes superposées (paradigme v10b)
-// face1 = icône principale, face2 = icône secondaire (plus transparente)
-function renderFaceSVG(icon1, icon2, isFace2Row) {
-    return `<div class="icon-stack">
-        <svg viewBox="0 0 90 44" style="opacity:0.45">${renderIcon(icon2, isFace2Row)}</svg>
-        <svg viewBox="0 0 90 44">${renderIcon(icon1, isFace2Row)}</svg>
-    </div>`;
-}
+        function mul(A, B) {
+            const R = [[0,0,0],[0,0,0],[0,0,0]];
+            for (let i = 0; i < 3; i++)
+                for (let j = 0; j < 3; j++)
+                    for (let k = 0; k < 3; k++)
+                        R[i][j] += A[i][k] * B[k][j];
+            return R;
+        }
 
-// ══════════════════════════════════════════════════════════
-//  MATRICES DE ROTATION (v10b)
-// ══════════════════════════════════════════════════════════
+        function cleanMat(M) {
+            return M.map(row => row.map(v => {
+                const r = Math.round(v);
+                return Math.abs(v - r) < 0.001 ? r : v;
+            }));
+        }
 
-function mul(A,B){const R=[[0,0,0],[0,0,0],[0,0,0]];for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)R[i][j]+=A[i][k]*B[k][j];return R;}
-function cleanMat(M){return M.map(r=>r.map(v=>{const rr=Math.round(v);return Math.abs(v-rr)<0.0001?rr:v;}));}
-function I3(){return [[1,0,0],[0,1,0],[0,0,1]];}
-function rotX90() { return [[1,0,0],[0,0,-1],[0,1,0]]; }
-function rotXn90(){ return [[1,0,0],[0,0,1],[0,-1,0]]; }
-function rotY90() { return [[0,0,1],[0,1,0],[-1,0,0]]; }
-function rotYn90(){ return [[0,0,-1],[0,1,0],[1,0,0]]; }
-function rotZn90(){ return [[0,1,0],[-1,0,0],[0,0,1]]; }
-function matToCSS(M){ return `matrix3d(${M[0][0]},${M[1][0]},${M[2][0]},0,${M[0][1]},${M[1][1]},${M[2][1]},0,${M[0][2]},${M[1][2]},${M[2][2]},0,0,0,0,1)`; }
+        function matToCSS(M) {
+            return `matrix3d(${M[0][0]},${M[1][0]},${M[2][0]},0,${M[0][1]},${M[1][1]},${M[2][1]},0,${M[0][2]},${M[1][2]},${M[2][2]},0,0,0,0,1)`;
+        }
 
-// Normales locales des 6 faces
-const FACE_NORMALS = [[0,0,1],[0,0,-1],[1,0,0],[-1,0,0],[0,-1,0],[0,1,0]];
-const FACE_CLASSES = ['face-front','face-back','face-right','face-left','face-top','face-bottom'];
+        // =====================================================
+        // STATE
+        // =====================================================
+        let globalRotation = INITIAL_ROTATION;
+        let crownRotations = new Array(ROWS).fill(0);
+        let lastFrameTime = 0;
 
-// Quelle face est actuellement face caméra (normale la plus proche de [0,0,1]) ?
-function getFrontFaceIdx(mat) {
-    let best=0, bestDot=-Infinity;
-    FACE_NORMALS.forEach((n,i)=>{
-        // normale monde = mat * n_local
-        const wz = mat[0][2]*n[0]+mat[1][2]*n[1]+mat[2][2]*n[2];
-        // composante Z = dot avec [0,0,1]
-        if(wz>bestDot){bestDot=wz;best=i;}
-    });
-    return best;
-}
+        // Cube states: [row][face] = { el, mat, targetMat, transitioning, faceConfigs }
+        const cubeStates = [];
 
-// ══════════════════════════════════════════════════════════
-//  HALO DYNAMIQUE (v10b)
-// ══════════════════════════════════════════════════════════
-
-function transformNormal(mat,n){
-    return [
-        mat[0][0]*n[0]+mat[0][1]*n[1]+mat[0][2]*n[2],
-        mat[1][0]*n[0]+mat[1][1]*n[1]+mat[1][2]*n[2],
-        mat[2][0]*n[0]+mat[2][1]*n[1]+mat[2][2]*n[2],
-    ];
-}
-
-function updateGlow(faceEls, mat, stateColor) {
-    const colors = {
-        white:   '126,200,227',
-        silver:  '34,211,238',
-        gold:    '255,215,0',
-        emerald: '52,211,153',
-        cosmic:  '196,181,253',
-    };
-    const c = colors[stateColor] || colors.white;
-    faceEls.forEach((faceEl,idx)=>{
-        const n = FACE_NORMALS[idx];
-        const wn = transformNormal(mat,n);
-        const dot = wn[2];
-        const intensity = Math.max(0,dot);
-        const outerR = intensity*32, outerA = intensity*0.3;
-        const midR   = intensity*14, midA   = intensity*0.18;
-        const innerA = intensity*0.1;
-        const borderA= 0.22 + intensity*0.5;
-        faceEl.style.boxShadow   = `0 0 ${outerR}px rgba(${c},${outerA}),0 0 ${midR}px rgba(${c},${midA}),inset 0 0 26px rgba(${c},${innerA})`;
-        faceEl.style.borderColor = `rgba(${c},${borderA})`;
-    });
-}
-
-function parseMatrix3d(str){
-    const m=str.match(/matrix3d\((.+)\)/); if(!m) return null;
-    const v=m[1].split(',').map(Number);
-    return [[v[0],v[4],v[8]],[v[1],v[5],v[9]],[v[2],v[6],v[10]]];
-}
-
-// ══════════════════════════════════════════════════════════
-//  ÉTAT DU JEU (v14)
-// ══════════════════════════════════════════════════════════
-
-const COLS=4, ROWS=6, TOTAL=24;
-const STATE_ORDER=['white','silver','gold','emerald','cosmic'];
-const STATE_MULT ={white:1,silver:2,gold:3,emerald:5,cosmic:10};
-const POINTS={simple:100,chain:500,twin:1000};
-const ROTATION_SPEED=700, FUSION_MOVE=380, FUSION_FADE=180, FUSION_APPEAR=450, GRAVITY_DELAY=140;
-
-let dominos=[], currentLevel=1;
-let score=0, bestScore=0, comboCount=0, lastFusionTime=0;
-let isAnimating=false, isLocalRotating=false;
-let history=[], scoreHistory=[];
-let rotationQueue=[], continuousState=null, continuousTimer=null, dragState=null;
-let fusionCounts={silver:0,gold:0,emerald:0,cosmic:0};
-
-const LEVEL_SEEDS={1:12345,2:67890,3:24680,4:13579};
-function seededRng(seed){let s=seed;return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};}
-
-// ══════════════════════════════════════════════════════════
-//  STRUCTURE DOMINO — maintenant avec mat de rotation 3D
-//  face1 / face2 = les deux icônes superposées sur CHAQUE face du cube
-//  La face "avant" affiche les icônes face1 + face2 superposées
-//  La rotation du cube change quelle paire d'icônes est visible
-// ══════════════════════════════════════════════════════════
-
-function generateDominos() {
-    const rng=seededRng(LEVEL_SEEDS[currentLevel]);
-    const keys=LEVEL_ICONS[currentLevel];
-    return Array.from({length:TOTAL},(_,i)=>{
-        const x=i%COLS, y=Math.floor(i/COLS);
-        // 6 faces, chacune avec 2 icônes superposées
-        const faces=Array.from({length:6},()=>({
-            icon1:keys[Math.floor(rng()*keys.length)],
-            icon2:keys[Math.floor(rng()*keys.length)],
-        }));
-        return {
-            faces,
-            mat: I3(),
-            state:'white',
-            // Pour la logique de fusion on garde face1/face2 du domino original (face FRONT)
-            face1: faces[0].icon1,
-            face2: faces[0].icon2,
-            rotation:((x+y)%2===0)?0:90, // orientation initiale (logique v14)
+        // Auto rotation
+        const AUTO = {
+            targetSpeed: -2.5,
+            resumeDelay: 300,
+            rampDuration: 500,
+            isActive: false,
+            currentSpeed: 0,
+            resumeTimeout: null,
+            rampStartTime: null
         };
-    });
-}
 
-// ══════════════════════════════════════════════════════════
-//  RENDU
-// ══════════════════════════════════════════════════════════
+        // Interaction
+        const INTERACTION = {
+            sensitivity: 0.35,
+            maxDelta: 12,
+            maxPixels: 80,
+            directionThreshold: 15
+        };
 
-const gridEl=document.getElementById('grid');
-const cellEls=[];
-const cubeInstances=[]; // {cubeEl, faceEls, mat, state}
+        let isDraggingGlobal = false;
+        let isDraggingCrown = false;
+        let activeCrown = -1;
+        let lastX = 0, lastY = 0;
+        let dragStartX = 0, dragStartY = 0;
+        let currentGesture = 'idle';
 
-function render() {
-    gridEl.innerHTML='';
-    cellEls.length=0;
-    cubeInstances.length=0;
+        // =====================================================
+        // CUBE SPIN ACTIONS
+        // =====================================================
+        const SPIN_ACTIONS = [rotX90, rotXn90, rotY90, rotYn90, rotZn90, rotZ90];
 
-    for(let i=0;i<TOTAL;i++){
-        const cell=document.createElement('div');
-        cell.className='cell';
-        cell.dataset.index=i;
+        function spinCube(cubeState) {
+            if (cubeState.transitioning) return;
+            cubeState.transitioning = true;
 
-        if(!dominos[i]){
-            cell.classList.add('empty');
-            // cellule vide : face fantôme
-            const cube=document.createElement('div');
-            cube.className='cube';
-            const fFront=document.createElement('div');
-            fFront.className='face face-front';
-            cube.appendChild(fFront);
-            cell.appendChild(cube);
-            gridEl.appendChild(cell);
-            cellEls.push(cell);
-            cubeInstances.push(null);
-            continue;
+            // Random rotation axis
+            const action = SPIN_ACTIONS[Math.floor(Math.random() * SPIN_ACTIONS.length)];
+            cubeState.targetMat = cleanMat(mul(action(), cubeState.targetMat));
+            cubeState.el.style.transform = matToCSS(cubeState.targetMat);
+
+            // Flash effect
+            cubeState.el.classList.add('tap-flash');
+            setTimeout(() => cubeState.el.classList.remove('tap-flash'), 200);
+
+            setTimeout(() => {
+                cubeState.mat = cubeState.targetMat.map(r => [...r]);
+                cubeState.transitioning = false;
+            }, 600);
         }
 
-        const d=dominos[i];
-        const cube=document.createElement('div');
-        cube.className=`cube state-${d.state}`;
-        cube.style.transform=matToCSS(d.mat);
+        // =====================================================
+        // BUILD CYLINDER
+        // =====================================================
+        function buildCylinder() {
+            const cylinder = document.getElementById('cylinder');
+            cylinder.innerHTML = '';
+            cubeStates.length = 0;
 
-        const faceEls=[];
-        FACE_CLASSES.forEach((fc,fi)=>{
-            const face=document.createElement('div');
-            face.className=`face ${fc}`;
-            const fd=d.faces[fi];
-            face.innerHTML=renderFaceSVG(fd.icon1, fd.icon2, false);
-            cube.appendChild(face);
-            faceEls.push(face);
+            for (let r = 0; r < ROWS; r++) {
+                const crown = document.createElement('div');
+                crown.className = 'crown';
+                crown.dataset.row = r;
+                crown.style.top = (r * CROWN_HEIGHT) + 'px';
+
+                const rowStates = [];
+
+                for (let f = 0; f < FACES; f++) {
+                    const seed = r * FACES + f;
+                    const faceConfigs = generateCubeFaces(seed);
+
+                    // Outer cell (positioned on cylinder)
+                    const cell = document.createElement('div');
+                    cell.className = 'cube-cell';
+                    cell.dataset.face = f;
+                    cell.dataset.row = r;
+                    const angle = f * ANGLE_STEP;
+                    cell.style.transform = `rotateY(${angle}deg) translateZ(${RADIUS}px)`;
+
+                    // Inner mini-cube
+                    const miniCube = document.createElement('div');
+                    miniCube.className = 'mini-cube';
+
+                    const FACE_CLASSES = ['face-front','face-back','face-right','face-left','face-top','face-bottom'];
+                    faceConfigs.forEach((fd, idx) => {
+                        const faceEl = document.createElement('div');
+                        faceEl.className = 'face ' + FACE_CLASSES[idx];
+                        faceEl.innerHTML = buildFaceSVG(fd);
+                        miniCube.appendChild(faceEl);
+                    });
+
+                    cell.appendChild(miniCube);
+                    crown.appendChild(cell);
+
+                    const state = {
+                        el: miniCube,
+                        cell: cell,
+                        mat: [[1,0,0],[0,1,0],[0,0,1]],
+                        targetMat: [[1,0,0],[0,1,0],[0,0,1]],
+                        transitioning: false,
+                        row: r,
+                        face: f
+                    };
+                    rowStates.push(state);
+
+                    // Tap to spin
+                    let tapStart = null, tapMoved = false;
+                    cell.addEventListener('pointerdown', (e) => {
+                        tapStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+                        tapMoved = false;
+                    });
+                    cell.addEventListener('pointermove', (e) => {
+                        if (!tapStart) return;
+                        if (Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > 8) tapMoved = true;
+                    });
+                    cell.addEventListener('pointerup', (e) => {
+                        if (!tapStart) return;
+                        const dt = Date.now() - tapStart.time;
+                        if (!tapMoved && dt < 300) {
+                            e.stopPropagation();
+                            spinCube(state);
+                        }
+                        tapStart = null;
+                    });
+                }
+
+                cylinder.appendChild(crown);
+                cubeStates.push(rowStates);
+            }
+            updateAllRotations();
+        }
+
+        // =====================================================
+        // ROTATION & GLOW
+        // =====================================================
+        function updateAllRotations() {
+            const crowns = document.querySelectorAll('.crown');
+            crowns.forEach((crown, idx) => {
+                const total = globalRotation + crownRotations[idx];
+                crown.style.transform = `rotateY(${total}deg)`;
+            });
+            updateFrontFacing();
+        }
+
+        function updateFrontFacing() {
+            for (let r = 0; r < ROWS; r++) {
+                const totalRot = globalRotation + crownRotations[r];
+                for (let f = 0; f < FACES; f++) {
+                    const faceAngle = f * ANGLE_STEP + totalRot;
+                    let norm = ((faceAngle % 360) + 360) % 360;
+                    if (norm > 180) norm -= 360;
+                    const isFront = Math.abs(norm) < ANGLE_STEP * 1.2;
+                    const cell = cubeStates[r]?.[f]?.cell;
+                    if (cell) {
+                        cell.classList.toggle('front-facing', isFront);
+                    }
+                }
+            }
+        }
+
+        // =====================================================
+        // AUTO ROTATION
+        // =====================================================
+        function stopAutoRotation() {
+            AUTO.isActive = false;
+            AUTO.currentSpeed = 0;
+            AUTO.rampStartTime = null;
+            if (AUTO.resumeTimeout) { clearTimeout(AUTO.resumeTimeout); AUTO.resumeTimeout = null; }
+            document.querySelectorAll('.crown').forEach(c => c.classList.remove('auto-rotating'));
+        }
+
+        function scheduleAutoResume() {
+            if (AUTO.resumeTimeout) clearTimeout(AUTO.resumeTimeout);
+            AUTO.resumeTimeout = setTimeout(startAutoRotation, AUTO.resumeDelay);
+        }
+
+        function startAutoRotation() {
+            AUTO.isActive = true;
+            AUTO.currentSpeed = 0;
+            AUTO.rampStartTime = performance.now();
+            document.querySelectorAll('.crown').forEach(c => c.classList.add('auto-rotating'));
+        }
+
+        function updateAutoRotation(ts) {
+            if (!AUTO.isActive) return;
+            if (AUTO.rampStartTime !== null) {
+                const elapsed = ts - AUTO.rampStartTime;
+                const progress = Math.min(elapsed / AUTO.rampDuration, 1);
+                AUTO.currentSpeed = AUTO.targetSpeed * (1 - Math.pow(1 - progress, 3));
+                if (progress >= 1) AUTO.rampStartTime = null;
+            }
+            const dt = (ts - lastFrameTime) / 1000;
+            globalRotation += AUTO.currentSpeed * dt;
+            updateAllRotations();
+        }
+
+        function animationLoop(ts) {
+            if (lastFrameTime === 0) lastFrameTime = ts;
+            updateAutoRotation(ts);
+            lastFrameTime = ts;
+            requestAnimationFrame(animationLoop);
+        }
+
+        // =====================================================
+        // INTERACTION HELPERS
+        // =====================================================
+        function sanitizeDelta(px) {
+            if (Math.abs(px) > INTERACTION.maxPixels) return 0;
+            let deg = px * INTERACTION.sensitivity;
+            return Math.max(-INTERACTION.maxDelta, Math.min(INTERACTION.maxDelta, deg));
+        }
+
+        function snapToGrid(rotation) {
+            const norm = ((rotation % 360) + 360) % 360;
+            return Math.round((norm - INITIAL_ROTATION) / ANGLE_STEP) * ANGLE_STEP + INITIAL_ROTATION;
+        }
+
+        function snapGlobal() {
+            globalRotation = snapToGrid(globalRotation);
+            updateAllRotations();
+        }
+
+        function snapCrown(idx) {
+            crownRotations[idx] = Math.round(crownRotations[idx] / ANGLE_STEP) * ANGLE_STEP;
+            updateAllRotations();
+        }
+
+        function getRowFromY(y) {
+            const rect = document.getElementById('scene').getBoundingClientRect();
+            const relY = y - rect.top;
+            const zoneH = 480 / ROWS;
+            if (relY < 0) return 0;
+            if (relY >= 480) return ROWS - 1;
+            return Math.min(Math.floor(relY / zoneH), ROWS - 1);
+        }
+
+        function setDragging(crownIdx, on) {
+            const crowns = document.querySelectorAll('.crown');
+            if (crownIdx === -1) {
+                crowns.forEach(c => on ? c.classList.add('dragging') : c.classList.remove('dragging'));
+            } else if (crowns[crownIdx]) {
+                on ? crowns[crownIdx].classList.add('dragging') : crowns[crownIdx].classList.remove('dragging');
+            }
+        }
+
+        // =====================================================
+        // EVENTS — SWIPE ZONE (global rotation)
+        // =====================================================
+        const swipeZone = document.getElementById('swipeZone');
+        const scene = document.getElementById('scene');
+
+        function onStart() { stopAutoRotation(); }
+        function onEnd() { scheduleAutoResume(); }
+
+        swipeZone.addEventListener('pointerdown', (e) => {
+            onStart();
+            isDraggingGlobal = true;
+            lastX = e.clientX;
+            setDragging(-1, true);
+            swipeZone.setPointerCapture(e.pointerId);
+        });
+        swipeZone.addEventListener('pointermove', (e) => {
+            if (!isDraggingGlobal) return;
+            const dx = e.clientX - lastX;
+            const deg = sanitizeDelta(dx);
+            if (deg !== 0) { globalRotation += deg; updateAllRotations(); }
+            lastX = e.clientX;
+        });
+        swipeZone.addEventListener('pointerup', () => {
+            if (isDraggingGlobal) {
+                isDraggingGlobal = false;
+                setDragging(-1, false);
+                snapGlobal();
+                onEnd();
+            }
         });
 
-        cell.appendChild(cube);
-        gridEl.appendChild(cell);
-        cellEls.push(cell);
-        cubeInstances.push({cubeEl:cube, faceEls, mat:d.mat, state:d.state});
-    }
-
-    // Lancer le halo dynamique pour tous les cubes
-    startAllGlows();
-}
-
-function startAllGlows(){
-    cubeInstances.forEach((inst,i)=>{
-        if(!inst) return;
-        const d=dominos[i];
-        function glowLoop(){
-            if(!inst.cubeEl.isConnected) return;
-            const computed=getComputedStyle(inst.cubeEl).transform;
-            const mat=parsed=parsed=(computed&&computed!=='none')?parseMatrix3d(computed):null;
-            updateGlow(inst.faceEls, mat||d.mat, d.state);
-            requestAnimationFrame(glowLoop);
-        }
-        requestAnimationFrame(glowLoop);
-    });
-}
-
-// ══════════════════════════════════════════════════════════
-//  LOGIQUE FUSION (v14 — inchangée)
-// ══════════════════════════════════════════════════════════
-
-function getPos(i){return{x:i%COLS,y:Math.floor(i/COLS)};}
-function getIndex(x,y){return(x<0||x>=COLS||y<0||y>=ROWS)?-1:y*COLS+x;}
-
-function getExposedFace(domino,dir){
-    const r=((domino.rotation%360)+360)%360;
-    const map={0:{top:'face1',bottom:'face2'},90:{left:'face2',right:'face1'},180:{top:'face2',bottom:'face1'},270:{left:'face1',right:'face2'}};
-    const face=map[r]?.[dir]; return face?domino[face]:null;
-}
-function getRemainingFace(domino,excDir){
-    const r=((domino.rotation%360)+360)%360;
-    const map={0:{top:'face2',bottom:'face1'},90:{right:'face2',left:'face1'},180:{top:'face1',bottom:'face2'},270:{right:'face1',left:'face2'}};
-    const face=map[r]?.[excDir]; return face?domino[face]:null;
-}
-function areTwins(d1,d2){
-    if(!d1||!d2) return false;
-    const r1=((d1.rotation%360)+360)%360, r2=((d2.rotation%360)+360)%360;
-    if(r1===r2&&d1.face1===d2.face1&&d1.face2===d2.face2) return true;
-    if(Math.abs(r1-r2)===180&&d1.face1===d2.face2&&d1.face2===d2.face1) return true;
-    return false;
-}
-
-function checkFusions(){
-    if(isAnimating||isLocalRotating) return;
-    // Twins
-    for(let i=0;i<TOTAL;i++){
-        if(!dominos[i]) continue;
-        const{x,y}=getPos(i);
-        const iR=getIndex(x+1,y); if(iR!==-1&&areTwins(dominos[i],dominos[iR])){performTwinFusion(i,iR,'h');return;}
-        const iB=getIndex(x,y+1); if(iB!==-1&&areTwins(dominos[i],dominos[iB])){performTwinFusion(i,iB,'v');return;}
-    }
-    // Chain
-    for(let i=0;i<TOTAL;i++){
-        if(!dominos[i]) continue;
-        const{x,y}=getPos(i);
-        if(x>0&&x<COLS-1){
-            const iL=getIndex(x-1,y),iR=getIndex(x+1,y);
-            if(iL!==-1&&iR!==-1&&dominos[iL]&&dominos[iR]){
-                const fLR=getExposedFace(dominos[iL],'right'),fCL=getExposedFace(dominos[i],'left');
-                const fCR=getExposedFace(dominos[i],'right'),fRL=getExposedFace(dominos[iR],'left');
-                if(fLR&&fCL&&fLR===fCL&&fCR&&fRL&&fCR===fRL){performChainFusion(iL,i,iR,'h');return;}
-            }
-        }
-        if(y>0&&y<ROWS-1){
-            const iT=getIndex(x,y-1),iB=getIndex(x,y+1);
-            if(iT!==-1&&iB!==-1&&dominos[iT]&&dominos[iB]){
-                const fTB=getExposedFace(dominos[iT],'bottom'),fCT=getExposedFace(dominos[i],'top');
-                const fCB=getExposedFace(dominos[i],'bottom'),fBT=getExposedFace(dominos[iB],'top');
-                if(fTB&&fCT&&fTB===fCT&&fCB&&fBT&&fCB===fBT){performChainFusion(iT,i,iB,'v');return;}
-            }
-        }
-    }
-    // Simple
-    for(let i=0;i<TOTAL;i++){
-        if(!dominos[i]) continue;
-        const{x,y}=getPos(i);
-        const checks=[{ni:getIndex(x+1,y),d1:'right',d2:'left'},{ni:getIndex(x,y+1),d1:'bottom',d2:'top'}];
-        for(const{ni,d1,d2}of checks){
-            if(ni===-1||!dominos[ni]) continue;
-            const f1=getExposedFace(dominos[i],d1),f2=getExposedFace(dominos[ni],d2);
-            if(f1&&f2&&f1===f2){performFusion(i,ni);return;}
-        }
-    }
-    if(Date.now()-lastFusionTime>2000){comboCount=0;document.getElementById('combo').style.opacity='0.5';}
-}
-
-function addScore(basePoints,states){
-    const now=Date.now();
-    let stMult=1; states.forEach(s=>{stMult=Math.max(stMult,STATE_MULT[s]||1);});
-    if(now-lastFusionTime<2000&&lastFusionTime>0) comboCount++;
-    else comboCount=1;
-    lastFusionTime=now;
-    const comboMult=1+(comboCount-1)*0.5;
-    const pts=Math.round(basePoints*stMult*comboMult);
-    score+=pts;
-    if(score>bestScore) bestScore=score;
-    updateScoreDisplay(pts);
-    return pts;
-}
-
-function updateScoreDisplay(){
-    const el=document.getElementById('score');
-    el.textContent=score.toLocaleString();
-    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
-    const combo=document.getElementById('combo');
-    combo.textContent=comboCount>1?`×${(1+(comboCount-1)*0.5).toFixed(1)}`:'×1';
-    combo.style.opacity=comboCount>1?'1':'0.5';
-    document.getElementById('best').textContent=bestScore.toLocaleString();
-}
-
-function showFP(pts,x,y){
-    const el=document.createElement('div'); el.className='fp';
-    el.textContent=`+${pts.toLocaleString()}`; el.style.left=`${x}px`; el.style.top=`${y}px`;
-    document.body.appendChild(el); setTimeout(()=>el.remove(),900);
-}
-
-// Crée un nouveau domino résultant de fusion (conserve les faces du cube existant, met à jour icon1/icon2 front)
-function makeResultDomino(nf1, nf2, rotation, state, baseMat) {
-    const keys=LEVEL_ICONS[currentLevel];
-    // On reconstruit les 6 faces avec les nouvelles icônes front et des icônes aléatoires ailleurs
-    const rng=seededRng(Date.now()&0xffff);
-    const faces=Array.from({length:6},(_,fi)=>{
-        if(fi===0) return {icon1:nf1||keys[0], icon2:nf2||keys[0]};
-        return {icon1:keys[Math.floor(rng()*keys.length)], icon2:keys[Math.floor(rng()*keys.length)]};
-    });
-    return {faces, mat:baseMat||I3(), state, face1:nf1||keys[0], face2:nf2||keys[0], rotation};
-}
-
-function performFusion(i1,i2){
-    isAnimating=true;
-    const d1=dominos[i1],d2=dominos[i2];
-    const el1=cellEls[i1]?.querySelector('.cube'), el2=cellEls[i2]?.querySelector('.cube');
-    if(!el1||!el2){isAnimating=false;return;}
-    const nf1=getRemainingFace(d1,'right')||getRemainingFace(d1,'bottom');
-    const nf2=getRemainingFace(d2,'left')||getRemainingFace(d2,'top');
-    const maxSt=Math.max(STATE_ORDER.indexOf(d1.state),STATE_ORDER.indexOf(d2.state));
-    const ns=STATE_ORDER[Math.min(maxSt+1,STATE_ORDER.length-1)];
-    if(ns!=='white'&&fusionCounts[ns]!==undefined){fusionCounts[ns]++;} 
-    let basePts=POINTS.simple;
-    if(d1.state===d2.state&&d1.state!=='white') basePts={silver:1000,gold:3000,emerald:5000,cosmic:10000}[d1.state]||POINTS.simple;
-    const pts=addScore(basePts,[d1.state,d2.state]);
-    const rect=el1.getBoundingClientRect();
-    showFP(pts,rect.left+rect.width/2,rect.top);
-    cellEls[i1]?.classList.add('fusing'); cellEls[i2]?.classList.add('fusing');
-    setTimeout(()=>{
-        el1.style.opacity=el2.style.opacity='0';
-        setTimeout(()=>{
-            dominos[i1]=makeResultDomino(nf1,nf2,d1.rotation,ns,d1.mat);
-            dominos[i2]=null; render();
-            setTimeout(()=>{isAnimating=false;applyGravity();},FUSION_APPEAR);
-        },FUSION_FADE);
-    },FUSION_MOVE);
-}
-
-function performChainFusion(i1,i2,i3,dir){
-    isAnimating=true;
-    const d1=dominos[i1],d2=dominos[i2],d3=dominos[i3];
-    const el1=cellEls[i1]?.querySelector('.cube'),el2=cellEls[i2]?.querySelector('.cube'),el3=cellEls[i3]?.querySelector('.cube');
-    if(!el1||!el2||!el3){isAnimating=false;return;}
-    const nf1=getRemainingFace(d1,dir==='h'?'left':'top');
-    const nf2=getRemainingFace(d3,dir==='h'?'right':'bottom');
-    const maxSt=Math.max(STATE_ORDER.indexOf(d1.state),STATE_ORDER.indexOf(d2.state),STATE_ORDER.indexOf(d3.state));
-    const ns=STATE_ORDER[Math.min(maxSt+2,STATE_ORDER.length-1)];
-    if(ns!=='white'&&fusionCounts[ns]!==undefined) fusionCounts[ns]++;
-    const pts=addScore(POINTS.chain,[d1.state,d2.state,d3.state]);
-    const rect=el2.getBoundingClientRect(); showFP(pts,rect.left+rect.width/2,rect.top);
-    cellEls[i1]?.classList.add('fusing'); cellEls[i2]?.classList.add('fusing'); cellEls[i3]?.classList.add('fusing');
-    setTimeout(()=>{
-        el1.style.opacity=el2.style.opacity=el3.style.opacity='0';
-        setTimeout(()=>{
-            dominos[i2]=makeResultDomino(nf1,nf2,d2.rotation,ns,d2.mat);
-            dominos[i1]=null; dominos[i3]=null; render();
-            setTimeout(()=>{isAnimating=false;applyGravity();},FUSION_APPEAR);
-        },FUSION_FADE);
-    },FUSION_MOVE);
-}
-
-function performTwinFusion(i1,i2,dir){
-    isAnimating=true;
-    const d1=dominos[i1],d2=dominos[i2];
-    const el1=cellEls[i1]?.querySelector('.cube'),el2=cellEls[i2]?.querySelector('.cube');
-    if(!el1||!el2){isAnimating=false;return;}
-    fusionCounts.cosmic++;
-    const pts=addScore(POINTS.twin,[d1.state,d2.state]);
-    const rect=el1.getBoundingClientRect(); showFP(pts,rect.left+rect.width/2,rect.top);
-    cellEls[i1]?.classList.add('fusing'); cellEls[i2]?.classList.add('fusing');
-    setTimeout(()=>{
-        el1.style.opacity=el2.style.opacity='0';
-        setTimeout(()=>{
-            dominos[i1]=makeResultDomino(d1.face1,d1.face2,d1.rotation,'cosmic',d1.mat);
-            dominos[i2]=null; render();
-            setTimeout(()=>{isAnimating=false;applyGravity();},FUSION_APPEAR);
-        },FUSION_FADE);
-    },FUSION_MOVE);
-}
-
-// ══════════════════════════════════════════════════════════
-//  GRAVITÉ (v14)
-// ══════════════════════════════════════════════════════════
-
-function applyGravity(){
-    if(isAnimating) return;
-    isAnimating=true;
-    let moved=true;
-    const step=()=>{
-        moved=false;
-        for(let y=ROWS-2;y>=0;y--){
-            for(let x=0;x<COLS;x++){
-                const i=getIndex(x,y),iB=getIndex(x,y+1);
-                if(dominos[i]&&!dominos[iB]){dominos[iB]=dominos[i];dominos[i]=null;moved=true;}
-            }
-        }
-        render();
-        if(moved) setTimeout(step,GRAVITY_DELAY);
-        else setTimeout(()=>{isAnimating=false;checkFusions();},180);
-    };
-    step();
-}
-
-// ══════════════════════════════════════════════════════════
-//  ROTATION LOCALE (tap) — tourne le domino dans sa cellule
-//  + rotation 3D du cube (swipe h/v sur le cube)
-// ══════════════════════════════════════════════════════════
-
-function queueRotation(idx){
-    rotationQueue.push(idx);
-    if(rotationQueue.length===1) processRotationQueue();
-}
-
-function processRotationQueue(){
-    if(rotationQueue.length===0||isAnimating||isLocalRotating) return;
-    const idx=rotationQueue[0];
-    const d=dominos[idx]; if(!d){rotationQueue.shift();processRotationQueue();return;}
-    saveState(); isLocalRotating=true;
-    d.rotation+=90;
-    const cubeEl=cellEls[idx]?.querySelector('.cube');
-    if(cubeEl){
-        cubeEl.style.transition='transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-        // Rotation 2D dans la cellule via rotateZ
-        const baseCSS=matToCSS(d.mat);
-        cubeEl.style.transform=baseCSS+` rotateZ(${d.rotation}deg)`;
-        setTimeout(()=>{rotationQueue.shift();if(rotationQueue.length>0)processRotationQueue();else{isLocalRotating=false;checkFusions();}},200);
-    } else {rotationQueue.shift();isLocalRotating=false;processRotationQueue();}
-}
-
-// Rotation 3D du cube (swipe sur le cube) — change quelle face est visible
-function rotateCube3D(idx, dir) {
-    if(isAnimating||isLocalRotating||!dominos[idx]) return;
-    saveState(); isLocalRotating=true;
-    const d=dominos[idx];
-    const rotFn={up:rotXn90,down:rotX90,left:rotYn90,right:rotY90}[dir];
-    if(!rotFn){isLocalRotating=false;return;}
-    d.mat=cleanMat(mul(rotFn(),d.mat));
-    // Mettre à jour face1/face2 selon la nouvelle face front
-    const fi=getFrontFaceIdx(d.mat);
-    d.face1=d.faces[fi].icon1;
-    d.face2=d.faces[fi].icon2;
-    render();
-    setTimeout(()=>{isLocalRotating=false;checkFusions();},60);
-}
-
-// ══════════════════════════════════════════════════════════
-//  ROTATION GROUPE (drag diagonal v14)
-// ══════════════════════════════════════════════════════════
-
-function detectDiag(dx,dy){
-    const ax=Math.abs(dx),ay=Math.abs(dy);
-    if(ax<15||ay<15||ax/ay<0.5||ax/ay>2) return null;
-    return dy<0?(dx>0?'ur':'ul'):(dx>0?'dr':'dl');
-}
-function getGroup(x,y,dir){
-    const off={ur:[0,-1],ul:[-1,-1],dr:[0,0],dl:[-1,0]};
-    const[ox,oy]=off[dir],tx=x+ox,ty=y+oy;
-    if(tx<0||tx>COLS-2||ty<0||ty>ROWS-2) return null;
-    return[getIndex(tx,ty),getIndex(tx+1,ty),getIndex(tx,ty+1),getIndex(tx+1,ty+1)];
-}
-function isClockwise(dir){return dir==='ur'||dir==='dr';}
-function stopContinuous(){if(continuousTimer){clearTimeout(continuousTimer);continuousTimer=null;}continuousState=null;}
-
-function executeRotation(indices,clockwise,cb){
-    if(isLocalRotating) return;
-    saveState(); isLocalRotating=true;
-    const cells=indices.map(idx=>({el:cellEls[idx]?.querySelector('.cube'),domino:dominos[idx],sx:idx%COLS,sy:Math.floor(idx/COLS)}));
-    const map=clockwise?[2,0,3,1]:[1,3,0,2];
-    cells.forEach((c,i)=>{c.tx=indices[map[i]]%COLS;c.ty=Math.floor(indices[map[i]]/COLS);});
-    const dur=continuousState?ROTATION_SPEED*0.7:ROTATION_SPEED*0.5;
-    const start=performance.now();
-    const cellSize=gridEl.children[0]?.offsetWidth||72;
-    const gap=parseFloat(getComputedStyle(gridEl).gap)||7;
-    function animate(t){
-        const p=Math.min((t-start)/dur,1),e=1-Math.pow(1-p,3);
-        cells.forEach(c=>{if(c.el){const dx=(c.tx-c.sx)*(cellSize+gap)*e,dy=(c.ty-c.sy)*(cellSize+gap)*e;c.el.style.transform=matToCSS(c.domino?.mat||I3())+` translate(${dx}px,${dy}px)`;}});
-        if(p<1) requestAnimationFrame(animate); else finishRotation(indices,clockwise,cb);
-    }
-    requestAnimationFrame(animate);
-}
-
-function finishRotation(indices,clockwise,cb){
-    const saved=indices.map(i=>dominos[i]),map=clockwise?[2,0,3,1]:[1,3,0,2];
-    for(let i=0;i<4;i++) dominos[indices[map[i]]]=saved[i];
-    render(); isLocalRotating=false; setTimeout(checkFusions,50); if(cb) cb();
-}
-
-function attemptRotation(x,y,dx,dy){
-    const dir=detectDiag(dx,dy); if(!dir) return false;
-    const group=getGroup(x,y,dir); if(!group||!group.some(i=>dominos[i])) return false;
-    continuousState={x,y,dir};
-    (function step(){
-        if(!continuousState) return;
-        const g=getGroup(continuousState.x,continuousState.y,continuousState.dir);
-        if(!g||!g.some(i=>dominos[i])){stopContinuous();return;}
-        executeRotation(g,isClockwise(continuousState.dir),()=>{
-            if(continuousState&&!continuousTimer) continuousTimer=setTimeout(step,ROTATION_SPEED*0.3);
+        // =====================================================
+        // EVENTS — SCENE (crown rotation)
+        // =====================================================
+        scene.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.cube-cell')) return; // let cube handle taps
+            onStart();
+            activeCrown = getRowFromY(e.clientY);
+            lastX = e.clientX;
+            dragStartX = lastX;
+            currentGesture = 'idle';
         });
-    })();
-    return true;
-}
 
-// ══════════════════════════════════════════════════════════
-//  INTERACTIONS (v14 + swipe 3D cube)
-// ══════════════════════════════════════════════════════════
+        document.addEventListener('pointermove', (e) => {
+            if (isDraggingGlobal) return;
+            if (activeCrown < 0) return;
 
-function handleStart(e){
-    if(isAnimating) return;
-    if(continuousState){stopContinuous();return;}
-    const touch=e.touches?.[0]||e;
-    const target=e.target.closest('.cell'); if(!target) return;
-    const idx=parseInt(target.dataset.index);
-    dragState={idx,x:idx%COLS,y:Math.floor(idx/COLS),sx:touch.clientX,sy:touch.clientY,moved:false,isEmpty:!dominos[idx]};
-    e.preventDefault();
-}
+            const dx = e.clientX - dragStartX;
+            if (currentGesture === 'idle' && Math.abs(dx) > INTERACTION.directionThreshold) {
+                currentGesture = 'drag';
+                isDraggingCrown = true;
+                setDragging(activeCrown, true);
+            }
 
-function handleMove(e){
-    if(!dragState||dragState.moved) return;
-    const touch=e.touches?.[0]||e;
-    const dx=touch.clientX-dragState.sx, dy=touch.clientY-dragState.sy;
-    const dist=Math.hypot(dx,dy);
-    if(dist<12) return;
-    dragState.moved=true;
+            if (currentGesture === 'drag') {
+                const dpx = e.clientX - lastX;
+                const deg = sanitizeDelta(dpx);
+                if (deg !== 0) { crownRotations[activeCrown] += deg; updateAllRotations(); }
+            }
+            lastX = e.clientX;
+        });
 
-    // Swipe diagonal = rotation groupe
-    const diagDir=detectDiag(dx,dy);
-    if(diagDir){
-        attemptRotation(dragState.x,dragState.y,dx,dy);
-        return;
-    }
+        document.addEventListener('pointerup', () => {
+            if (isDraggingCrown && activeCrown >= 0) {
+                setDragging(activeCrown, false);
+                snapCrown(activeCrown);
+                onEnd();
+            }
+            if (activeCrown >= 0 && currentGesture === 'idle') onEnd();
+            isDraggingCrown = false;
+            activeCrown = -1;
+            currentGesture = 'idle';
+        });
 
-    // Swipe h/v = rotation 3D du cube (change la face visible)
-    const ax=Math.abs(dx),ay=Math.abs(dy);
-    if(ax>ay && ax>20) rotateCube3D(dragState.idx, dx>0?'right':'left');
-    else if(ay>ax && ay>20) rotateCube3D(dragState.idx, dy>0?'down':'up');
+        // =====================================================
+        // WHEEL
+        // =====================================================
+        document.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            onStart();
+            const dpx = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+            const deg = sanitizeDelta(dpx * 0.5);
+            if (deg !== 0) { globalRotation += deg; updateAllRotations(); }
+            clearTimeout(window._wt);
+            window._wt = setTimeout(() => { snapGlobal(); onEnd(); }, 150);
+        }, { passive: false });
 
-    e.preventDefault();
-}
+        // =====================================================
+        // KEYBOARD
+        // =====================================================
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') { onStart(); globalRotation += ANGLE_STEP; updateAllRotations(); onEnd(); }
+            if (e.key === 'ArrowRight') { onStart(); globalRotation -= ANGLE_STEP; updateAllRotations(); onEnd(); }
+        });
 
-function handleEnd(e){
-    if(continuousState){stopContinuous();e?.preventDefault?.();}
-    if(dragState&&!dragState.moved&&!dragState.isEmpty) queueRotation(dragState.idx);
-    dragState=null;
-}
-
-gridEl.addEventListener('mousedown',handleStart);
-gridEl.addEventListener('touchstart',handleStart,{passive:false});
-document.addEventListener('mousemove',handleMove);
-document.addEventListener('touchmove',handleMove,{passive:false});
-document.addEventListener('mouseup',handleEnd);
-document.addEventListener('touchend',handleEnd);
-
-// ══════════════════════════════════════════════════════════
-//  SAVE / UNDO / RESET
-// ══════════════════════════════════════════════════════════
-
-function saveState(){
-    history.push(JSON.parse(JSON.stringify(dominos)));
-    scoreHistory.push(score);
-    if(history.length>20){history.shift();scoreHistory.shift();}
-}
-function undoAction(){
-    if(!history.length||isAnimating||isLocalRotating) return;
-    dominos=history.pop(); score=scoreHistory.pop();
-    document.getElementById('score').textContent=score.toLocaleString();
-    render();
-}
-function resetGame(){
-    if(isAnimating||isLocalRotating) return;
-    stopContinuous(); history=[]; scoreHistory=[]; rotationQueue=[];
-    score=0; comboCount=0; lastFusionTime=0;
-    fusionCounts={silver:0,gold:0,emerald:0,cosmic:0};
-    dominos=generateDominos();
-    render(); updateScoreDisplay();
-}
-function setLevel(lvl){
-    currentLevel=lvl;
-    document.querySelectorAll('.level-selector button').forEach((b,i)=>b.classList.toggle('active',i+1===lvl));
-    resetGame();
-}
-
-// Init
-try{bestScore=parseInt(localStorage.getItem('adam_cube2_best')||'0');document.getElementById('best').textContent=bestScore;}catch(e){}
-setInterval(()=>{try{localStorage.setItem('adam_cube2_best',bestScore);}catch(e){}},5000);
-resetGame();
-</script>
+        // =====================================================
+        // INIT
+        // =====================================================
+        buildCylinder();
+        requestAnimationFrame(animationLoop);
+        startAutoRotation();
+    </script>
 </body>
 </html>
