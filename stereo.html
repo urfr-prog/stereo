@@ -2,664 +2,1220 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ADAM — Cylinder of Cubes v1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADAM Cube — K5 v35 · Three.js</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            background: #08090e;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            overflow: hidden;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
+            background: #0c0d14; min-height: 100vh;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            font-family: 'Courier New', monospace;
+            overflow: hidden; user-select: none;
+            color: rgba(180,180,190,0.5);
         }
-
-        .container {
-            width: 100%;
-            max-width: 420px;
-            height: 100vh;
-            max-height: 860px;
-            background: linear-gradient(180deg, #0a0b12 0%, #12142a 50%, #0a0b12 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Ambiance particles */
-        .container::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: 
-                radial-gradient(ellipse 600px 200px at 50% 40%, rgba(126,200,227,0.04) 0%, transparent 70%),
-                radial-gradient(ellipse 300px 300px at 30% 60%, rgba(90,140,220,0.03) 0%, transparent 60%);
-            pointer-events: none;
-            animation: ambientDrift 12s ease-in-out infinite alternate;
-        }
-
-        @keyframes ambientDrift {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(10px, -15px) rotate(2deg); }
-        }
-
-        .title {
-            position: absolute;
-            top: 30px;
-            font-size: 11px;
-            letter-spacing: 6px;
-            text-transform: uppercase;
-            color: rgba(126,200,227,0.35);
-            font-weight: 300;
-        }
-
-        .scene {
-            width: 320px;
-            height: 480px;
-            perspective: 800px;
-            perspective-origin: 50% 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .cylinder {
-            width: 0;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-            transform-origin: center center;
-        }
-
-        .crown {
-            position: absolute;
-            width: 0;
-            left: 0;
-            height: 90px;
-            transform-style: preserve-3d;
-            transition: transform 0.3s ease-out;
-        }
-
-        .crown.dragging { transition: none; }
-        .crown.auto-rotating { transition: none; }
-
-        /* Mini-cube wrapper */
-        .cube-cell {
-            position: absolute;
-            width: 68px;
-            height: 68px;
-            left: -34px;
-            top: 11px;
-            perspective: 400px;
-            backface-visibility: visible;
-            cursor: pointer;
-        }
-
-        .mini-cube {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .mini-cube.spinning {
-            transition: transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
-        }
-
-        .face {
-            position: absolute;
-            width: 68px;
-            height: 68px;
-            border-radius: 10px;
-            overflow: hidden;
-            backface-visibility: hidden;
-            background: rgba(10, 12, 22, 0.92);
-            border: 1px solid rgba(126, 200, 227, 0.25);
-            box-shadow:
-                0 0 12px rgba(126, 200, 227, 0.05),
-                inset 0 0 20px rgba(126, 200, 227, 0.03);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .face svg {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .face-front  { transform: rotateY(0deg)    translateZ(34px); }
-        .face-back   { transform: rotateY(180deg)   translateZ(34px); }
-        .face-right  { transform: rotateY(90deg)    translateZ(34px); }
-        .face-left   { transform: rotateY(-90deg)   translateZ(34px); }
-        .face-top    { transform: rotateX(90deg)    translateZ(34px); }
-        .face-bottom { transform: rotateX(-90deg)   translateZ(34px); }
-
-        .face svg .separator { stroke: rgba(126,200,227,0.25); stroke-width: 0.6; }
-        .face svg line.icon, .face svg path.icon,
-        .face svg circle.icon, .face svg rect.icon {
-            stroke: #7ec8e3;
-            stroke-width: 1.8;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            fill: none;
-            filter: drop-shadow(0 0 3px rgba(126,200,227,0.4));
-        }
-        .face svg circle.point {
-            fill: #7ec8e3;
-            stroke: none;
-            filter: drop-shadow(0 0 3px rgba(126,200,227,0.4));
-        }
-
-        /* Glow on front-facing cubes */
-        .cube-cell.front-facing .face {
-            border-color: rgba(126, 200, 227, 0.5);
-            box-shadow:
-                0 0 20px rgba(126, 200, 227, 0.12),
-                0 0 8px rgba(126, 200, 227, 0.08),
-                inset 0 0 20px rgba(126, 200, 227, 0.06);
-        }
-
-        .swipe-zone {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 70px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: grab;
-        }
-
-        .swipe-zone:active { cursor: grabbing; }
-
-        .hint {
-            color: rgba(126,200,227,0.25);
-            font-size: 11px;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-        }
-
-        /* Tap feedback */
-        .mini-cube.tap-flash .face {
-            border-color: rgba(126, 200, 227, 0.8) !important;
-            box-shadow: 0 0 30px rgba(126, 200, 227, 0.3) !important;
-            transition: border-color 0.1s, box-shadow 0.1s;
-        }
+        #c { width: 600px; height: 600px; touch-action: none; cursor: default; }
+        .hud { display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:12px; }
+        .face-label { color:rgba(126,200,227,0.25);font-size:0.7rem;letter-spacing:0.2em; }
+        .info-line { color:rgba(180,180,190,0.3);font-size:0.6rem;min-height:1.2em; }
+        .nav-dots { display:flex;gap:6px;margin-top:4px; }
+        .nav-dot { width:7px;height:7px;border-radius:50%;background:rgba(126,200,227,0.12);transition:all 0.4s; }
+        .nav-dot.active { background:rgba(126,200,227,0.6);box-shadow:0 0 7px rgba(126,200,227,0.4); }
+        .ctrl-row { display:flex;gap:8px;justify-content:center;margin-top:6px; }
+        .dbtn { background:transparent;border:1px solid rgba(126,200,227,0.25);color:rgba(126,200,227,0.4);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.6rem;font-family:inherit; }
+        .dbtn:hover { border-color:rgba(126,200,227,0.5);color:rgba(126,200,227,0.7); }
+        .slider-row { display:flex;align-items:center;gap:6px;margin-top:6px;color:rgba(126,200,227,0.4);font-size:0.55rem; }
+        .slider-row input[type=range] { -webkit-appearance:none;appearance:none;width:100px;height:3px;background:rgba(126,200,227,0.15);border-radius:2px;outline:none;cursor:pointer; }
+        .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:rgba(126,200,227,0.5);border:1px solid rgba(126,200,227,0.3); }
+        .slider-row input[type=range]::-moz-range-thumb { width:10px;height:10px;border-radius:50%;background:rgba(126,200,227,0.5);border:1px solid rgba(126,200,227,0.3); }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <div class="title">A D A M · C Y L I N D E R</div>
-        <div class="scene" id="scene">
-            <div class="cylinder" id="cylinder"></div>
+    <canvas id="c" width="1200" height="1200"></canvas>
+    <div class="hud">
+        <div class="face-label" id="faceLabel">1 / 3</div>
+        <div class="nav-dots" id="navDots"></div>
+        <div class="info-line" id="infoLine"></div>
+        <div class="ctrl-row">
+            <button class="dbtn" id="btnReset">reset</button>
+            <button class="dbtn" id="btnExport">export JSON</button>
         </div>
-        <div class="swipe-zone" id="swipeZone">
-            <div class="hint">← swipe →</div>
+        <div class="ctrl-row">
+            <button class="dbtn" id="btnCenter">axe ∣</button>
+            <button class="dbtn" id="btnBg">fond: étoiles ✦</button>
+        </div>
+        <div class="slider-row">
+            <span>◇</span>
+            <input type="range" id="sliderAlpha" min="10" max="100" value="100">
+            <span id="alphaVal">100%</span>
         </div>
     </div>
+    <div id="centerLine" style="display:none;position:fixed;top:0;left:50%;width:1px;height:100vh;background:rgba(255,0,0,0.4);pointer-events:none;z-index:999;"></div>
 
-    <script>
-        // =====================================================
-        // CONSTANTES
-        // =====================================================
-        const FACES = 8;
-        const ROWS = 5;
-        const RADIUS = 130;
-        const ANGLE_STEP = 360 / FACES; // 45°
-        const PERSPECTIVE = 800;
-        const INITIAL_ROTATION = ANGLE_STEP / 2;
-        const CROWN_HEIGHT = 90;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
 
-        // =====================================================
-        // DOMINO SYMBOLS (from domino-cube)
-        // =====================================================
-        const DOMINOS = [
-            [`<path class="icon" d="M 20 32 L 45 12 L 70 32"/>`,
-             `<circle class="icon" cx="45" cy="22" r="12"/>`],
-            [`<path class="icon" d="M 10 30 Q 28 8 45 22 Q 62 36 80 14"/>`,
-             `<circle class="point" cx="45" cy="12" r="4"/><circle class="point" cx="30" cy="32" r="4"/><circle class="point" cx="60" cy="32" r="4"/>`],
-            [`<circle class="icon" cx="30" cy="22" r="8"/><circle class="icon" cx="60" cy="22" r="8"/>`,
-             `<line class="icon" x1="25" y1="10" x2="25" y2="34"/><line class="icon" x1="45" y1="10" x2="45" y2="34"/><line class="icon" x1="65" y1="10" x2="65" y2="34"/>`],
-            [`<path class="icon" d="M 45 8 L 70 22 L 45 36 L 20 22 Z"/>`,
-             `<line class="icon" x1="15" y1="22" x2="75" y2="22"/>`],
-            [`<path class="icon" d="M 45 8 L 70 36 L 20 36 Z"/>`,
-             `<path class="icon" d="M 10 30 L 25 10 L 45 30 L 65 10 L 80 30"/>`],
-            [`<circle class="point" cx="30" cy="14" r="4"/><circle class="point" cx="60" cy="14" r="4"/><circle class="point" cx="30" cy="30" r="4"/><circle class="point" cx="60" cy="30" r="4"/>`,
-             `<rect class="icon" x="25" y="8" width="40" height="28" rx="3"/>`],
-            [`<line class="icon" x1="20" y1="32" x2="70" y2="12"/><line class="icon" x1="20" y1="12" x2="70" y2="32"/>`,
-             `<circle class="icon" cx="45" cy="22" r="16"/><circle class="point" cx="45" cy="22" r="3"/>`],
-            [`<path class="icon" d="M 25 10 L 25 34 L 65 34"/>`,
-             `<path class="icon" d="M 20 22 Q 45 4 70 22 Q 45 40 20 22"/>`],
-        ];
+// ═══ ICÔNES — dessin Canvas2D direct ═══
+// Chaque fonction dessine dans un ctx, centré sur (cx,cy), taille ~sz
+// Couleur néon cyan
 
-        // Face config for each cube: [dominoIdx, showTop, showBottom] or null
-        function generateCubeFaces(seed) {
-            const faces = [];
-            for (let i = 0; i < 6; i++) {
-                const r = (seed * 7 + i * 13) % 17;
-                if (r < 3) {
-                    faces.push(null); // empty face
-                } else {
-                    const dIdx = (seed + i * 3) % DOMINOS.length;
-                    const showTop = r % 3 !== 0;
-                    const showBottom = r % 4 !== 0;
-                    faces.push([dIdx, showTop, showBottom || !showTop]);
-                }
+function drawIcon(ctx, iconIdx, cx, cy, sz, color) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = sz * 0.08;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = sz * 0.25;
+    const h = sz * 0.4, w = sz * 0.4;
+
+    switch(iconIdx) {
+        case 0: // chevronUp
+            ctx.beginPath();
+            ctx.moveTo(cx-w, cy+h*0.5); ctx.lineTo(cx, cy-h*0.5); ctx.lineTo(cx+w, cy+h*0.5);
+            ctx.stroke(); break;
+        case 1: // chevronDown
+            ctx.beginPath();
+            ctx.moveTo(cx-w, cy-h*0.5); ctx.lineTo(cx, cy+h*0.5); ctx.lineTo(cx+w, cy-h*0.5);
+            ctx.stroke(); break;
+        case 2: // circle
+            ctx.beginPath();
+            ctx.arc(cx, cy, sz*0.28, 0, Math.PI*2);
+            ctx.stroke(); break;
+        case 3: // twoCircles
+            ctx.beginPath(); ctx.arc(cx-w*0.45, cy, sz*0.18, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx+w*0.45, cy, sz*0.18, 0, Math.PI*2); ctx.stroke();
+            break;
+        case 4: // line
+            ctx.beginPath(); ctx.moveTo(cx-w, cy); ctx.lineTo(cx+w, cy);
+            ctx.stroke(); break;
+        case 5: // threeLines
+            ctx.beginPath(); ctx.moveTo(cx-w*0.5, cy-h); ctx.lineTo(cx-w*0.5, cy+h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, cy-h); ctx.lineTo(cx, cy+h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx+w*0.5, cy-h); ctx.lineTo(cx+w*0.5, cy+h); ctx.stroke();
+            break;
+        case 6: // twoPoints
+            ctx.beginPath(); ctx.arc(cx-w*0.45, cy, sz*0.09, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+w*0.45, cy, sz*0.09, 0, Math.PI*2); ctx.fill();
+            break;
+        case 7: // threePoints
+            ctx.beginPath(); ctx.arc(cx, cy-h*0.5, sz*0.09, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx-w*0.55, cy+h*0.45, sz*0.09, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx+w*0.55, cy+h*0.45, sz*0.09, 0, Math.PI*2); ctx.fill();
+            break;
+        case 8: // waveUp
+            ctx.beginPath();
+            ctx.moveTo(cx-w, cy+h*0.3);
+            ctx.quadraticCurveTo(cx-w*0.3, cy-h, cx, cy);
+            ctx.quadraticCurveTo(cx+w*0.3, cy+h, cx+w, cy-h*0.3);
+            ctx.stroke(); break;
+        case 9: // waveDown
+            ctx.beginPath();
+            ctx.moveTo(cx-w, cy-h*0.3);
+            ctx.quadraticCurveTo(cx-w*0.3, cy+h, cx, cy);
+            ctx.quadraticCurveTo(cx+w*0.3, cy-h, cx+w, cy+h*0.3);
+            ctx.stroke(); break;
+        case 10: // twoL
+            ctx.beginPath(); ctx.moveTo(cx-w*0.6, cy-h*0.7); ctx.lineTo(cx-w*0.6, cy+h*0.4); ctx.lineTo(cx+w*0.1, cy+h*0.4); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx+w*0.6, cy-h*0.7); ctx.lineTo(cx+w*0.6, cy+h*0.4); ctx.lineTo(cx-w*0.1, cy+h*0.4); ctx.stroke();
+            break;
+        case 11: // arc
+            ctx.beginPath();
+            ctx.moveTo(cx-w*0.8, cy+h*0.3);
+            ctx.quadraticCurveTo(cx, cy-h*0.9, cx+w*0.8, cy+h*0.3);
+            ctx.stroke(); break;
+        case 12: // twoSquares
+            ctx.strokeRect(cx-w*0.7, cy-h*0.35, sz*0.22, sz*0.22);
+            ctx.strokeRect(cx+w*0.15, cy-h*0.35, sz*0.22, sz*0.22);
+            break;
+        case 13: // target
+            ctx.beginPath(); ctx.arc(cx, cy, sz*0.28, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, sz*0.1, 0, Math.PI*2); ctx.fill();
+            break;
+        case 14: // dumbbell
+            ctx.beginPath(); ctx.arc(cx-w*0.55, cy, sz*0.12, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx+w*0.55, cy, sz*0.12, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx-w*0.43, cy); ctx.lineTo(cx+w*0.43, cy); ctx.stroke();
+            break;
+        case 15: // singleLine (vertical)
+            ctx.beginPath(); ctx.moveTo(cx, cy-h*0.8); ctx.lineTo(cx, cy+h*0.8);
+            ctx.stroke(); break;
+        case 16: // singlePoint
+            ctx.beginPath(); ctx.arc(cx, cy, sz*0.12, 0, Math.PI*2); ctx.fill();
+            break;
+        case 17: // diamond
+            ctx.beginPath();
+            ctx.moveTo(cx, cy-h*0.7); ctx.lineTo(cx+w*0.5, cy); ctx.lineTo(cx, cy+h*0.7); ctx.lineTo(cx-w*0.5, cy);
+            ctx.closePath(); ctx.stroke(); break;
+    }
+    ctx.restore();
+}
+
+// ═══ DOMINO TEXTURE — médiane verticale, néon, tout Canvas2D ═══
+
+const _dtc = {};
+const _bgc = {};
+
+function getDominoBgTex(tint){
+    if(_bgc[tint]) return _bgc[tint];
+    const S=512, cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+    const ctx=cv.getContext('2d');
+    const C={
+        normal:{glow:'rgba(126,200,227,0.12)'},ice:{glow:'rgba(220,235,248,0.1)'},
+        cyan:{glow:'rgba(94,239,255,0.3)'},pink:{glow:'rgba(255,120,180,0.15)'},
+        silver:{glow:'rgba(34,211,238,0.15)'},gold:{glow:'rgba(255,215,0,0.15)'},
+        emerald:{glow:'rgba(52,211,153,0.15)'},
+        cosmic:{glow:'rgba(131,56,236,0.2)'},
+        supernovae:{glow:'rgba(255,140,0,0.2)'},
+    };
+    const glow=(C[tint]||C.normal).glow;
+    const r=36, m=8;
+    ctx.fillStyle='rgba(14,15,24,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(m+r,m);ctx.lineTo(S-m-r,m);ctx.quadraticCurveTo(S-m,m,S-m,m+r);
+    ctx.lineTo(S-m,S-m-r);ctx.quadraticCurveTo(S-m,S-m,S-m-r,S-m);
+    ctx.lineTo(m+r,S-m);ctx.quadraticCurveTo(m,S-m,m,S-m-r);
+    ctx.lineTo(m,m+r);ctx.quadraticCurveTo(m,m,m+r,m);
+    ctx.closePath();ctx.fill();
+    ctx.shadowColor=glow;ctx.shadowBlur=30;ctx.fill();ctx.shadowBlur=0;
+    const tex=new THREE.CanvasTexture(cv);
+    _bgc[tint]=tex; return tex;
+}
+
+function getDominoTex(leftIdx, rightIdx, tint) {
+    const k = leftIdx+'|'+rightIdx+'|'+tint;
+    if (_dtc[k]) return _dtc[k];
+
+    const S = 512;
+    const cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+    const ctx = cv.getContext('2d');
+
+    // Couleurs selon tint
+    const C={
+        normal:  {border:'rgba(126,200,227,0.5)',sep:'rgba(126,200,227,0.3)',icon:'#7ec8e3',glow:'rgba(126,200,227,0.12)'},
+        ice:     {border:'rgba(220,235,248,0.45)',sep:'rgba(220,235,248,0.25)',icon:'rgba(230,240,250,0.85)',glow:'rgba(220,235,248,0.1)'},
+        cyan:    {border:'rgba(126,200,227,0.9)',sep:'rgba(126,200,227,0.6)',icon:'#5eefff',glow:'rgba(94,239,255,0.3)'},
+        pink:    {border:'rgba(255,120,180,0.7)',sep:'rgba(255,120,180,0.4)',icon:'#ff78b4',glow:'rgba(255,120,180,0.15)'},
+        silver:  {border:'rgba(34,211,238,0.6)',sep:'rgba(34,211,238,0.35)',icon:'#22d3ee',glow:'rgba(34,211,238,0.15)'},
+        gold:    {border:'rgba(255,215,0,0.6)',sep:'rgba(255,215,0,0.35)',icon:'#ffd700',glow:'rgba(255,215,0,0.15)'},
+        emerald: {border:'rgba(52,211,153,0.6)',sep:'rgba(52,211,153,0.35)',icon:'#34d399',glow:'rgba(52,211,153,0.15)'},
+        cosmic:  {border:'rgba(131,56,236,0.7)',sep:'rgba(196,181,253,0.4)',icon:'#c4b5fd',glow:'rgba(131,56,236,0.2)'},
+        supernovae:{border:'rgba(255,140,0,0.7)',sep:'rgba(255,235,59,0.4)',icon:'#ffeb3b',glow:'rgba(255,140,0,0.2)'},
+    };
+    const c=C[tint]||C.normal;
+    const border=c.border, sep=c.sep, iconC=c.icon, glow=c.glow;
+
+    // Fond retiré — géré par bgMesh séparé
+    const r = 36, m = 8;
+
+    // Bordure néon
+    ctx.beginPath();
+    ctx.moveTo(m+r, m); ctx.lineTo(S-m-r, m); ctx.quadraticCurveTo(S-m, m, S-m, m+r);
+    ctx.lineTo(S-m, S-m-r); ctx.quadraticCurveTo(S-m, S-m, S-m-r, S-m);
+    ctx.lineTo(m+r, S-m); ctx.quadraticCurveTo(m, S-m, m, S-m-r);
+    ctx.lineTo(m, m+r); ctx.quadraticCurveTo(m, m, m+r, m);
+    ctx.closePath();
+    ctx.strokeStyle = border; ctx.lineWidth = 3;
+    ctx.shadowColor = border; ctx.shadowBlur = 15;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // ═══ SUPERPOSITION — deux icônes plein carré empilées ═══
+    const iconSz = S * 0.55;
+
+    // Couche arrière (face2 / rightIdx) — plus discrète
+    ctx.globalAlpha = 0.35;
+    drawIcon(ctx, rightIdx, S*0.5, S*0.5, iconSz, iconC);
+    ctx.globalAlpha = 1.0;
+
+    // Couche avant (face1 / leftIdx) — pleine intensité
+    drawIcon(ctx, leftIdx, S*0.5, S*0.5, iconSz, iconC);
+
+    // Médiane subtile par-dessus (séparateur visuel)
+    ctx.strokeStyle = sep; ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.4;
+    ctx.shadowColor = sep; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.moveTo(m+20, S/2); ctx.lineTo(S-m-20, S/2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1.0;
+
+    const tex = new THREE.CanvasTexture(cv);
+    _dtc[k] = tex;
+    return tex;
+}
+
+// ═══ TABLEAUX ═══
+
+const GAP = 1.15;
+const TABLEAUX = [
+    { name:'T1', sats:[
+        {x:GAP, y:0, v:[11,13]}, {x:-GAP, y:0, v:[17,10], state:'cosmic'}
+    ] },
+    { name:'T2', sats:[
+        {x:0, y:-GAP, v:[14,12], state:'supernovae'}, {x:0, y:GAP, v:[16,11]}
+    ] },
+    { name:'T3', sats:[
+        {x:-GAP, y:-GAP, v:[13,15], state:'emerald'}, {x:GAP, y:-GAP, v:[10,17], state:'cosmic'},
+        {x:-GAP, y:GAP, v:[12,14]}, {x:GAP, y:GAP, v:[11,16], state:'silver'}
+    ] },
+    { name:'T4', sats:[
+        {x:GAP, y:-2*GAP, v:[0,11]}, {x:0, y:-2*GAP, v:[17,13], state:'supernovae'},
+        {x:GAP, y:-GAP, v:[15,10], state:'gold'}, {x:GAP, y:GAP, v:[12,8]},
+        {x:-GAP, y:-GAP, v:[14,2], state:'cosmic'}, {x:-GAP, y:GAP, v:[16,5]}
+    ] },
+];
+const TOTAL = TABLEAUX.length;
+
+// ═══ CONFIG ═══
+
+const HALF = 0.52;
+const CAM_Z = 18;
+
+const CAM_Z_MIN = 8;    // zoom max (caméra au plus près)
+const CAM_Z_MAX = 18;   // zoom min (caméra au plus loin)
+
+function camTargetFor(tIdx, viewIdx){
+    if(viewIdx===undefined) viewIdx=mod(currentIdx);
+    const pts=[{x:0, y:0}];
+    sats.forEach(s=>{
+        if(s.tableau===tIdx&&!s.locked) pts.push({x:s.lx, y:s.ly});
+    });
+    // Inclure la position physique du flottant
+    if(lockedSat && tIdx===viewIdx){
+        const wp=new THREE.Vector3();lockedSat.mesh.getWorldPosition(wp);
+        const lp=cubeGroup.worldToLocal(wp.clone());
+        pts.push({x:lp.x, y:lp.y});
+    }
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    pts.forEach(p=>{
+        minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+        minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);
+    });
+    const cx=(minX+maxX)/2;
+    const hw=(maxX-minX)/2+0.6;
+    const hh=(maxY-minY)/2+0.6;
+    const spread=Math.max(hw,hh)*1.2;
+    const z=Math.min(CAM_Z_MAX, Math.max(CAM_Z_MIN, 1.5+spread*3.8));
+    return {x:cx, z};
+}
+function camTargetForStatic(tIdx){
+    const tab=TABLEAUX[tIdx]; if(!tab)return {x:0,z:CAM_Z};
+    // Inclure le cube central
+    const pts=[{x:0, y:0}];
+    tab.sats.forEach(s=>pts.push({x:s.x, y:s.y}));
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    pts.forEach(p=>{
+        minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+        minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);
+    });
+    const cx=(minX+maxX)/2;
+    const hw=(maxX-minX)/2+0.6;
+    const hh=(maxY-minY)/2+0.6;
+    const spread=Math.max(hw,hh)*1.2;
+    const z=Math.min(CAM_Z_MAX, Math.max(CAM_Z_MIN, 1.5+spread*3.8));
+    return {x:cx, z};
+}
+
+let targetCamX=0;
+function refreshZoom(){
+    const t=camTargetFor(mod(currentIdx));
+    targetCamX=t.x;targetCamZ=t.z;
+}
+
+const FACE_ROT=[0, Math.PI/2, Math.PI, -Math.PI/2];
+
+// ═══ THREE SETUP ═══
+
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setSize(600,600);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setClearColor(0x0c0d14);
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(40,1,0.1,100);
+const initCam=camTargetForStatic(0);
+camera.position.set(initCam.x,0,initCam.z);camera.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.8));
+
+// ═══ HELPERS ═══
+
+function rrShape(w,h,r){
+    const s=new THREE.Shape(),hw=w/2,hh=h/2;
+    s.moveTo(-hw+r,-hh);s.lineTo(hw-r,-hh);
+    s.quadraticCurveTo(hw,-hh,hw,-hh+r);s.lineTo(hw,hh-r);
+    s.quadraticCurveTo(hw,hh,hw-r,hh);s.lineTo(-hw+r,hh);
+    s.quadraticCurveTo(-hw,hh,-hw,hh-r);s.lineTo(-hw,-hh+r);
+    s.quadraticCurveTo(-hw,-hh,-hw+r,-hh);return s;
+}
+
+function placeSat(sat,faceRotY){
+    const q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),faceRotY);
+    sat.mesh.position.copy(new THREE.Vector3(sat.lx,sat.ly,HALF+SAT_LIFT).applyQuaternion(q));
+    sat.mesh.quaternion.copy(q);
+    sat.baseQuat = q.clone(); // référence pour le breathing
+}
+
+// ═══ PORTE ═══
+
+let porteValue=[13,11];
+const cubeGroup=new THREE.Group();scene.add(cubeGroup);
+
+function makePorteTex(val){ return getDominoTex(val[0], val[1], 'ice'); }
+const cubeMats=[];for(let i=0;i<6;i++)cubeMats.push(new THREE.MeshBasicMaterial({map:makePorteTex(porteValue),transparent:true}));
+const cubeMesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),cubeMats);cubeMesh.userData.isCube=true;cubeGroup.add(cubeMesh);
+
+// Halo ice — sprite radial gradient face-caméra
+const haloCanvas=document.createElement('canvas');haloCanvas.width=256;haloCanvas.height=256;
+const hctx=haloCanvas.getContext('2d');
+const grad=hctx.createRadialGradient(128,128,0,128,128,128);
+grad.addColorStop(0,'rgba(220,235,248,0.25)');
+grad.addColorStop(0.3,'rgba(200,220,240,0.12)');
+grad.addColorStop(0.6,'rgba(180,210,235,0.04)');
+grad.addColorStop(1,'rgba(180,210,235,0)');
+hctx.fillStyle=grad;hctx.fillRect(0,0,256,256);
+const haloTex=new THREE.CanvasTexture(haloCanvas);
+const haloSpriteMat=new THREE.SpriteMaterial({map:haloTex,transparent:true,opacity:0.7,depthWrite:false});
+const haloSprite=new THREE.Sprite(haloSpriteMat);
+haloSprite.scale.set(2.8,2.8,1);
+cubeGroup.add(haloSprite);
+
+function updatePorte(val){porteValue=val;const tex=makePorteTex(val);cubeMats.forEach(m=>{m.map=tex;m.needsUpdate=true;});}
+
+// ═══ SATELLITES — un seul plane texturé, pas de double carré ═══
+
+const sats=[];
+const SAT_DEPTH = 0.06;  // épaisseur du domino
+const SAT_LIFT = 0.08;   // hauteur de flottement au-dessus de la face
+function createSatMesh(value,tint){
+    const grp=new THREE.Group(), SZ=1.0, R=0.12;
+
+    // ── Face avant (texture domino — sans fond, icônes+contours+médiane) ──
+    const nMesh=new THREE.Mesh(
+        new THREE.PlaneGeometry(SZ, SZ),
+        new THREE.MeshBasicMaterial({map:getDominoTex(value[0],value[1],tint||'normal'),transparent:true,side:THREE.DoubleSide})
+    );
+    nMesh.position.z = SAT_DEPTH/2 + 0.001;
+    grp.add(nMesh);
+
+    // ── Fond arrondi séparé (contrôlé par le variateur) ──
+    const bgMesh=new THREE.Mesh(
+        new THREE.PlaneGeometry(SZ, SZ),
+        new THREE.MeshBasicMaterial({map:getDominoBgTex(tint||'normal'),transparent:true,opacity:1.0,side:THREE.DoubleSide})
+    );
+    bgMesh.position.z = SAT_DEPTH/2 + 0.0005;
+    grp.add(bgMesh);
+
+    // ── Corps 3D (épaisseur) — arrondi, semi-transparent ──
+    const bodyShape = rrShape(SZ, SZ, R);
+    const extrudeSettings = {depth: SAT_DEPTH, bevelEnabled: false};
+    const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, extrudeSettings);
+    bodyGeo.translate(0, 0, -SAT_DEPTH/2);
+    const sideMat = new THREE.MeshBasicMaterial({color:0x141520, transparent:true, opacity:0.45});sideMat._baseOp=0.45;
+    const faceMat = new THREE.MeshBasicMaterial({color:0x0a0b12, transparent:true, opacity:0.25});faceMat._baseOp=0.25;
+    const boxMesh = new THREE.Mesh(bodyGeo, [faceMat, sideMat]);
+    grp.add(boxMesh);
+
+    // ── Liseré néon sur les arêtes ──
+    const edgesGeo = new THREE.EdgesGeometry(bodyGeo, 15);
+    const edgeLines = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({color:0x7ec8e3, transparent:true, opacity:0.18}));
+    grp.add(edgeLines);
+
+    // ── Ombre portée ──
+    const shadowCanvas = document.createElement('canvas'); shadowCanvas.width=128; shadowCanvas.height=128;
+    const sctx = shadowCanvas.getContext('2d');
+    const sg = sctx.createRadialGradient(64,64,10,64,64,60);
+    sg.addColorStop(0,'rgba(0,0,0,0.35)');
+    sg.addColorStop(0.5,'rgba(0,0,0,0.15)');
+    sg.addColorStop(1,'rgba(0,0,0,0)');
+    sctx.fillStyle=sg; sctx.fillRect(0,0,128,128);
+    const shadowTex = new THREE.CanvasTexture(shadowCanvas);
+    const shadowMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(SZ*1.25, SZ*1.25),
+        new THREE.MeshBasicMaterial({map:shadowTex, transparent:true, opacity:0.6, depthWrite:false})
+    );
+    shadowMesh.position.z = -SAT_DEPTH/2 - SAT_LIFT + 0.005;
+    grp.add(shadowMesh);
+
+    // ── Glow (derrière, pour état locked) ──
+    const gShape=rrShape(SZ+0.06,SZ+0.06,R+0.03);
+    const gMesh=new THREE.Mesh(new THREE.ShapeGeometry(gShape),new THREE.MeshBasicMaterial({color:0x7ec8e3,transparent:true,opacity:0}));
+    gMesh.position.z=-SAT_DEPTH/2-0.005;grp.add(gMesh);
+    // Halo
+    const hMesh=new THREE.Mesh(new THREE.ShapeGeometry(rrShape(SZ+0.2,SZ+0.2,R+0.08)),new THREE.MeshBasicMaterial({color:0x7ec8e3,transparent:true,opacity:0}));
+    hMesh.position.z=-SAT_DEPTH/2-0.01;grp.add(hMesh);
+
+    grp.userData={numMesh:nMesh,bgMesh:bgMesh,glowMesh:gMesh,haloMesh:hMesh,boxMesh:boxMesh,edgeLines:edgeLines,shadowMesh:shadowMesh,isSat:true};
+    return grp;
+}
+
+TABLEAUX.forEach((tab,tIdx)=>{tab.sats.forEach((sd,sIdx)=>{
+    const st=sd.state||'white';
+    const mesh=createSatMesh(sd.v,st!=='white'?st:undefined);mesh.visible=false;cubeGroup.add(mesh);
+    sats.push({id:tIdx*100+sIdx,value:sd.v,state:st,tableau:tIdx,origTableau:tIdx,lx:sd.x,ly:sd.y,origLx:sd.x,origLy:sd.y,locked:false,mesh});
+});});
+
+// ═══ STATE ═══
+
+let lockedSat=null,currentIdx=0,busy=false,isAnimating=false,navDir=0;
+let isFlipped=false, flipDir=0;
+let targetCamZ=camTargetForStatic(0).z;
+const targetQuat=new THREE.Quaternion();
+function mod(n){return((n%TOTAL)+TOTAL)%TOTAL;}
+
+// ═══ ASSIGN ═══
+
+function assignFaces(){
+    const faceMap=[[mod(currentIdx),0],[mod(currentIdx+1),1],[mod(currentIdx-1),3]];
+    sats.forEach(sat=>{
+        if(sat.locked)return;
+        const entry=faceMap.find(f=>f[0]===sat.tableau);
+        if(entry){placeSat(sat,FACE_ROT[entry[1]]);if(sat.mesh.parent!==cubeGroup)cubeGroup.attach(sat.mesh);}
+    });
+}
+
+// ═══ NAV ═══
+
+// Helper: masquer tout satellite aux mêmes coordonnées que la source du locked, tous tableaux confondus
+function isHiddenBySrc(s){
+    return lockedSat&&!s.locked&&Math.abs(s.lx-lockedSat.srcLx)<0.2&&Math.abs(s.ly-lockedSat.srcLy)<0.2;
+}
+
+function navRight(){
+    if(busy||isAnimating)return;busy=true;isAnimating=true;navDir=1;flipDir=0;
+    targetQuat.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
+    const nextIdx=mod(currentIdx+1);
+    const t=camTargetFor(nextIdx, nextIdx);targetCamX=t.x;targetCamZ=t.z;
+    const show=[mod(currentIdx),nextIdx];
+    sats.forEach(s=>{if(!s.locked&&show.includes(s.tableau))s.mesh.visible=!isHiddenBySrc(s);});
+}
+function navLeft(){
+    if(busy||isAnimating)return;busy=true;isAnimating=true;navDir=-1;flipDir=0;
+    targetQuat.setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2);
+    const nextIdx=mod(currentIdx-1);
+    const t=camTargetFor(nextIdx, nextIdx);targetCamX=t.x;targetCamZ=t.z;
+    const show=[mod(currentIdx),nextIdx];
+    sats.forEach(s=>{if(!s.locked&&show.includes(s.tableau))s.mesh.visible=!isHiddenBySrc(s);});
+}
+
+function flipUp(){
+    if(busy||isAnimating)return;busy=true;isAnimating=true;navDir=0;flipDir=1;
+    targetQuat.setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI);
+    isFlipped=!isFlipped;
+}
+function flipDown(){
+    if(busy||isAnimating)return;busy=true;isAnimating=true;navDir=0;flipDir=-1;
+    targetQuat.setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI);
+    isFlipped=!isFlipped;
+}
+
+function onRotationComplete(){
+    if(flipDir!==0){
+        cubeGroup.quaternion.identity();targetQuat.identity();flipDir=0;
+        // Porte : re-swap pour annuler le swap mi-course (la porte résiste au flip)
+        updatePorte([porteValue[1],porteValue[0]]);
+        const fIdx=mod(currentIdx);
+        sats.forEach(s=>{
+            if(s.tableau===fIdx&&!s.locked&&s.tableau>=0){
+                s.ly=-s.ly;
+                s.mesh.scale.y *= -1;
             }
-            return faces;
+        });
+        assignFaces();isAnimating=false;busy=false;refreshZoom();updateUI();
+    } else {
+        currentIdx=mod(currentIdx+navDir);cubeGroup.quaternion.identity();targetQuat.identity();navDir=0;
+        assignFaces();isAnimating=false;busy=false;updateUI();
+    }
+}
+
+// ═══ TAP ═══
+
+function tapLock(sat){
+    if(busy||isAnimating)return;if(lockedSat)tapRelease(lockedSat);
+    sat.locked=true;lockedSat=sat;sat.srcTableau=sat.tableau;sat.srcLx=sat.lx;sat.srcLy=sat.ly;
+    sat.savedScaleY=sat.mesh.scale.y; // préserver l'orientation flip
+    // Masquer tout satellite à la même position source (évite superposition pendant navigation)
+    sats.forEach(s=>{
+        if(s!==sat&&!s.locked&&s.tableau===sat.srcTableau&&Math.abs(s.lx-sat.srcLx)<0.2&&Math.abs(s.ly-sat.srcLy)<0.2)
+            s.mesh.visible=false;
+    });
+    scene.attach(sat.mesh);refreshZoom();updateUI();
+}
+function tapRelease(sat){
+    if(!sat.locked)return;
+    if(isAnimating||busy)return;
+    const wp=new THREE.Vector3();sat.mesh.getWorldPosition(wp);
+    cubeGroup.attach(sat.mesh);
+    const fIdx=mod(currentIdx);
+    const lp=cubeGroup.worldToLocal(wp.clone());
+    const lx=lp.x,ly=lp.y;
+    let closest=null,cd=Infinity;
+    for(const o of sats){if(o===sat||o.locked||o.tableau!==fIdx)continue;const d=Math.hypot(o.lx-lx,o.ly-ly);if(d<cd){cd=d;closest=o;}}
+    const savedSY=sat.savedScaleY||1;
+    if(closest&&cd<GAP*0.9){
+        const cT=closest.tableau,cX=closest.lx,cY=closest.ly;
+        const closestScaleY=closest.mesh.scale.y;
+        // Le satellite flottant prend la place du closest
+        sat.tableau=cT;sat.lx=cX;sat.ly=cY;placeSat(sat,FACE_ROT[0]);sat.mesh.scale.set(1,savedSY,1);
+        // Le closest prend la place source (peut être un autre tableau)
+        closest.tableau=sat.srcTableau;closest.lx=sat.srcLx;closest.ly=sat.srcLy;
+        closest.mesh.scale.set(1,closestScaleY,1);
+        closest.mesh.visible=true;
+    } else {
+        sat.tableau=fIdx;sat.lx=lx;sat.ly=ly;placeSat(sat,FACE_ROT[0]);sat.mesh.scale.set(1,savedSY,1);
+    }
+    sat.locked=false;lockedSat=null;
+    assignFaces();
+    updateUI();
+}
+
+// ═══ DRAG SWAP ═══
+
+let swapAnim=null;
+
+function dragSwap(sat, dirX, dirY){
+    if(!sat||sat.locked||busy||isAnimating||swapAnim)return false;
+    const fIdx=mod(currentIdx);
+    if(sat.tableau!==fIdx)return false;
+    const st=sat.state||'white';
+    if(st==='white') return false;
+
+    // Direction constraints
+    if(st==='silver' && (dirY!==0||dirX===0)) return false;
+    if(st==='emerald' && (dirX!==0||dirY===0)) return false;
+    if(st==='gold' && (dirX===0||dirY===0)) return false;
+
+    const tx=sat.lx+dirX*GAP, ty=sat.ly+dirY*GAP;
+    const target=sats.find(s=>s!==sat&&!s.locked&&s.tableau===fIdx&&Math.abs(s.lx-tx)<0.2&&Math.abs(s.ly-ty)<0.2);
+    if(target){
+        const aFrom={x:sat.lx,y:sat.ly}, bFrom={x:target.lx,y:target.ly};
+        sat.lx=bFrom.x;sat.ly=bFrom.y;target.lx=aFrom.x;target.ly=aFrom.y;
+        swapAnim={pairs:[
+            {mesh:sat.mesh, from:aFrom, to:bFrom},
+            {mesh:target.mesh, from:bFrom, to:aFrom},
+        ], t:0};
+        return true;
+    }
+    return false;
+}
+
+function dragPorte(dirX, dirY){
+    if(busy||isAnimating||swapAnim)return false;
+    const fIdx=mod(currentIdx);
+    const tx=dirX*GAP, ty=dirY*GAP;
+    const target=sats.find(s=>!s.locked&&s.tableau===fIdx&&Math.abs(s.lx-tx)<0.2&&Math.abs(s.ly-ty)<0.2);
+    if(!target)return false;
+    
+    // Créer un ghost de la porte (plane temporaire) qui va voyager vers la position du satellite
+    const ghostMesh=new THREE.Mesh(
+        new THREE.PlaneGeometry(1,1),
+        new THREE.MeshBasicMaterial({map:getDominoTex(porteValue[0],porteValue[1],'ice'),transparent:true})
+    );
+    ghostMesh.position.set(0,0,HALF+0.02);
+    cubeGroup.add(ghostMesh);
+    
+    // Masquer la face avant du cube pendant le swap
+    cubeMats[4].opacity=0;
+    haloSprite.visible=false;
+    
+    // Stocker les valeurs pour le swap final
+    swapAnim={
+        pairs:[{mesh:target.mesh, from:{x:target.lx,y:target.ly}, to:{x:0,y:0}}],
+        ghost:ghostMesh, ghostFrom:{x:0,y:0}, ghostTo:{x:target.lx,y:target.ly},
+        target:target, oldPorte:[...porteValue], oldSat:[...target.value],
+        t:0, isPorteSwap:true
+    };
+    return true;
+}
+
+function tickSwapAnim(dt){
+    if(!swapAnim)return;
+    swapAnim.t+=dt*2.5; // plus lent pour bien voir
+    const p=Math.min(1, swapAnim.t);
+    const ease=p<0.5?2*p*p:(1-Math.pow(-2*p+2,2)/2);
+    
+    if(swapAnim.isPorteSwap){
+        // Satellite va vers le centre
+        swapAnim.pairs.forEach(pair=>{
+            pair.mesh.position.x=pair.from.x+(pair.to.x-pair.from.x)*ease;
+            pair.mesh.position.y=pair.from.y+(pair.to.y-pair.from.y)*ease;
+        });
+        // Ghost porte va vers la position du satellite
+        const g=swapAnim.ghost;
+        g.position.x=swapAnim.ghostFrom.x+(swapAnim.ghostTo.x-swapAnim.ghostFrom.x)*ease;
+        g.position.y=swapAnim.ghostFrom.y+(swapAnim.ghostTo.y-swapAnim.ghostFrom.y)*ease;
+        g.position.z=HALF+0.02;
+        
+        if(p>=1){
+            const target=swapAnim.target;
+            const flipped=target.mesh.scale.y<0;
+            // Porte reçoit les valeurs du sat — si le sat était flippé, ses valeurs visuelles sont inversées
+            if(flipped) updatePorte([swapAnim.oldSat[1],swapAnim.oldSat[0]]);
+            else updatePorte(swapAnim.oldSat);
+            // Sat reçoit les valeurs de la porte — si le sat est flippé, inverser pour compenser le scale.y
+            if(flipped) target.value=[swapAnim.oldPorte[1],swapAnim.oldPorte[0]];
+            else target.value=swapAnim.oldPorte;
+            const st=target.state||'white';
+            const tint=st!=='white'?st:'normal';
+            target.mesh.userData.numMesh.material.map=getDominoTex(target.value[0],target.value[1],tint);
+            // Nettoyer le ghost
+            cubeGroup.remove(swapAnim.ghost);
+            swapAnim.ghost.geometry.dispose();
+            swapAnim.ghost.material.dispose();
+            // Restaurer la face avant du cube
+            cubeMats[4].opacity=1;
+            haloSprite.visible=true;
+            // Replacer le satellite
+            placeSat(target,FACE_ROT[0]);
+            assignFaces();swapAnim=null;refreshZoom();updateUI();
         }
-
-        function buildFaceSVG(faceData) {
-            if (!faceData) return `<svg viewBox="0 0 90 90"></svg>`;
-            const [dominoIdx, showTop, showBottom] = faceData;
-            const pair = DOMINOS[dominoIdx];
-            const sep = (showTop && showBottom) ? `<line class="separator" x1="0" y1="45" x2="90" y2="45"/>` : '';
-            const top = showTop ? `<g>${pair[0]}</g>` : '';
-            const bot = showBottom ? `<g transform="translate(0, 45)">${pair[1]}</g>` : '';
-            return `<svg viewBox="0 0 90 90">${sep}${top}${bot}</svg>`;
-        }
-
-        // =====================================================
-        // ROTATION MATRICES (from domino-cube)
-        // =====================================================
-        function rotX90()  { return [[ 1, 0, 0],[ 0, 0,-1],[ 0, 1, 0]]; }
-        function rotXn90() { return [[ 1, 0, 0],[ 0, 0, 1],[ 0,-1, 0]]; }
-        function rotY90()  { return [[ 0, 0, 1],[ 0, 1, 0],[-1, 0, 0]]; }
-        function rotYn90() { return [[ 0, 0,-1],[ 0, 1, 0],[ 1, 0, 0]]; }
-        function rotZn90() { return [[ 0, 1, 0],[-1, 0, 0],[ 0, 0, 1]]; }
-        function rotZ90()  { return [[ 0,-1, 0],[ 1, 0, 0],[ 0, 0, 1]]; }
-
-        function mul(A, B) {
-            const R = [[0,0,0],[0,0,0],[0,0,0]];
-            for (let i = 0; i < 3; i++)
-                for (let j = 0; j < 3; j++)
-                    for (let k = 0; k < 3; k++)
-                        R[i][j] += A[i][k] * B[k][j];
-            return R;
-        }
-
-        function cleanMat(M) {
-            return M.map(row => row.map(v => {
-                const r = Math.round(v);
-                return Math.abs(v - r) < 0.001 ? r : v;
-            }));
-        }
-
-        function matToCSS(M) {
-            return `matrix3d(${M[0][0]},${M[1][0]},${M[2][0]},0,${M[0][1]},${M[1][1]},${M[2][1]},0,${M[0][2]},${M[1][2]},${M[2][2]},0,0,0,0,1)`;
-        }
-
-        // =====================================================
-        // STATE
-        // =====================================================
-        let globalRotation = INITIAL_ROTATION;
-        let crownRotations = new Array(ROWS).fill(0);
-        let lastFrameTime = 0;
-
-        // Cube states: [row][face] = { el, mat, targetMat, transitioning, faceConfigs }
-        const cubeStates = [];
-
-        // Auto rotation
-        const AUTO = {
-            targetSpeed: -2.5,
-            resumeDelay: 300,
-            rampDuration: 500,
-            isActive: false,
-            currentSpeed: 0,
-            resumeTimeout: null,
-            rampStartTime: null
-        };
-
-        // Interaction
-        const INTERACTION = {
-            sensitivity: 0.35,
-            maxDelta: 12,
-            maxPixels: 80,
-            directionThreshold: 15
-        };
-
-        let isDraggingGlobal = false;
-        let isDraggingCrown = false;
-        let activeCrown = -1;
-        let lastX = 0, lastY = 0;
-        let dragStartX = 0, dragStartY = 0;
-        let currentGesture = 'idle';
-
-        // =====================================================
-        // CUBE SPIN ACTIONS
-        // =====================================================
-        const SPIN_ACTIONS = [rotX90, rotXn90, rotY90, rotYn90, rotZn90, rotZ90];
-
-        function spinCube(cubeState) {
-            if (cubeState.transitioning) return;
-            cubeState.transitioning = true;
-
-            // Random rotation axis
-            const action = SPIN_ACTIONS[Math.floor(Math.random() * SPIN_ACTIONS.length)];
-            cubeState.targetMat = cleanMat(mul(action(), cubeState.targetMat));
-            cubeState.el.style.transform = matToCSS(cubeState.targetMat);
-
-            // Flash effect
-            cubeState.el.classList.add('tap-flash');
-            setTimeout(() => cubeState.el.classList.remove('tap-flash'), 200);
-
-            setTimeout(() => {
-                cubeState.mat = cubeState.targetMat.map(r => [...r]);
-                cubeState.transitioning = false;
-            }, 600);
-        }
-
-        // =====================================================
-        // BUILD CYLINDER
-        // =====================================================
-        function buildCylinder() {
-            const cylinder = document.getElementById('cylinder');
-            cylinder.innerHTML = '';
-            cubeStates.length = 0;
-
-            for (let r = 0; r < ROWS; r++) {
-                const crown = document.createElement('div');
-                crown.className = 'crown';
-                crown.dataset.row = r;
-                crown.style.top = (r * CROWN_HEIGHT) + 'px';
-
-                const rowStates = [];
-
-                for (let f = 0; f < FACES; f++) {
-                    const seed = r * FACES + f;
-                    const faceConfigs = generateCubeFaces(seed);
-
-                    // Outer cell (positioned on cylinder)
-                    const cell = document.createElement('div');
-                    cell.className = 'cube-cell';
-                    cell.dataset.face = f;
-                    cell.dataset.row = r;
-                    const angle = f * ANGLE_STEP;
-                    cell.style.transform = `rotateY(${angle}deg) translateZ(${RADIUS}px)`;
-
-                    // Inner mini-cube
-                    const miniCube = document.createElement('div');
-                    miniCube.className = 'mini-cube';
-
-                    const FACE_CLASSES = ['face-front','face-back','face-right','face-left','face-top','face-bottom'];
-                    faceConfigs.forEach((fd, idx) => {
-                        const faceEl = document.createElement('div');
-                        faceEl.className = 'face ' + FACE_CLASSES[idx];
-                        faceEl.innerHTML = buildFaceSVG(fd);
-                        miniCube.appendChild(faceEl);
-                    });
-
-                    cell.appendChild(miniCube);
-                    crown.appendChild(cell);
-
-                    const state = {
-                        el: miniCube,
-                        cell: cell,
-                        mat: [[1,0,0],[0,1,0],[0,0,1]],
-                        targetMat: [[1,0,0],[0,1,0],[0,0,1]],
-                        transitioning: false,
-                        row: r,
-                        face: f
-                    };
-                    rowStates.push(state);
-
-                    // Tap to spin
-                    let tapStart = null, tapMoved = false;
-                    cell.addEventListener('pointerdown', (e) => {
-                        tapStart = { x: e.clientX, y: e.clientY, time: Date.now() };
-                        tapMoved = false;
-                    });
-                    cell.addEventListener('pointermove', (e) => {
-                        if (!tapStart) return;
-                        if (Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > 8) tapMoved = true;
-                    });
-                    cell.addEventListener('pointerup', (e) => {
-                        if (!tapStart) return;
-                        const dt = Date.now() - tapStart.time;
-                        if (!tapMoved && dt < 300) {
-                            e.stopPropagation();
-                            spinCube(state);
-                        }
-                        tapStart = null;
-                    });
-                }
-
-                cylinder.appendChild(crown);
-                cubeStates.push(rowStates);
-            }
-            updateAllRotations();
-        }
-
-        // =====================================================
-        // ROTATION & GLOW
-        // =====================================================
-        function updateAllRotations() {
-            const crowns = document.querySelectorAll('.crown');
-            crowns.forEach((crown, idx) => {
-                const total = globalRotation + crownRotations[idx];
-                crown.style.transform = `rotateY(${total}deg)`;
+    } else {
+        swapAnim.pairs.forEach(pair=>{
+            pair.mesh.position.x=pair.from.x+(pair.to.x-pair.from.x)*ease;
+            pair.mesh.position.y=pair.from.y+(pair.to.y-pair.from.y)*ease;
+        });
+        if(p>=1){
+            swapAnim.pairs.forEach(pair=>{
+                const sat=sats.find(s=>s.mesh===pair.mesh);
+                if(sat&&!sat.locked) placeSat(sat,FACE_ROT[0]);
             });
-            updateFrontFacing();
+            assignFaces();swapAnim=null;refreshZoom();updateUI();
         }
+    }
+}
 
-        function updateFrontFacing() {
-            for (let r = 0; r < ROWS; r++) {
-                const totalRot = globalRotation + crownRotations[r];
-                for (let f = 0; f < FACES; f++) {
-                    const faceAngle = f * ANGLE_STEP + totalRot;
-                    let norm = ((faceAngle % 360) + 360) % 360;
-                    if (norm > 180) norm -= 360;
-                    const isFront = Math.abs(norm) < ANGLE_STEP * 1.2;
-                    const cell = cubeStates[r]?.[f]?.cell;
-                    if (cell) {
-                        cell.classList.toggle('front-facing', isFront);
-                    }
+// ═══ RAYCAST ═══
+
+const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
+function getSatAt(cx,cy){
+    const r=canvas.getBoundingClientRect();mouse.x=((cx-r.left)/r.width)*2-1;mouse.y=-((cy-r.top)/r.height)*2+1;
+    raycaster.setFromCamera(mouse,camera);const all=[];
+    sats.forEach(s=>{if(s.mesh.visible)s.mesh.traverse(c=>{if(c.isMesh)all.push(c);});});
+    for(const h of raycaster.intersectObjects(all,false)){let o=h.object;while(o){if(o.userData&&o.userData.isSat){const s=sats.find(x=>x.mesh===o);if(s)return s;}o=o.parent;}}return null;
+}
+
+function isCubeAt(cx,cy){
+    const r=canvas.getBoundingClientRect();mouse.x=((cx-r.left)/r.width)*2-1;mouse.y=-((cy-r.top)/r.height)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hits=raycaster.intersectObject(cubeMesh,false);
+    return hits.length>0;
+}
+
+// ═══ POINTER ═══
+
+let pStart=null,pMoved=false,pSat=null,pCube=false;
+canvas.addEventListener('pointerdown',e=>{pStart={x:e.clientX,y:e.clientY};pMoved=false;pSat=getSatAt(e.clientX,e.clientY);pCube=!pSat&&isCubeAt(e.clientX,e.clientY);canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(pStart&&Math.hypot(e.clientX-pStart.x,e.clientY-pStart.y)>10)pMoved=true;});
+canvas.addEventListener('pointerup',e=>{
+    if(!pStart)return;const dx=e.clientX-pStart.x,dy=e.clientY-pStart.y,dist=Math.hypot(dx,dy);
+    if(!pMoved){
+        const sat=getSatAt(e.clientX,e.clientY);
+        if(sat){if(sat.locked)tapRelease(sat);else tapLock(sat);}
+        else if(lockedSat)tapRelease(lockedSat);
+    } else if(dist>=15){
+        // Swipe depuis la porte
+        if(pCube){
+            let dirX=0,dirY=0;
+            if(Math.abs(dx)>Math.abs(dy)){dirX=dx>0?1:-1;}
+            else{dirY=dy>0?-1:1;}
+            if(dragPorte(dirX,dirY)){pStart=null;pSat=null;pCube=false;return;}
+        }
+        // Swipe depuis un satellite (swap entre sats si non-white)
+        if(pSat&&!pSat.locked){
+            let dirX=0,dirY=0;
+            const st=pSat.state||'white';
+            if(st==='gold'){
+                // Diagonal: both axes
+                dirX=dx>0?1:-1;
+                dirY=dy>0?-1:1;
+            } else {
+                if(Math.abs(dx)>Math.abs(dy)){dirX=dx>0?1:-1;}
+                else{dirY=dy>0?-1:1;}
+            }
+            if(dragSwap(pSat,dirX,dirY)){pStart=null;pSat=null;pCube=false;return;}
+        }
+        if(Math.abs(dx)>=Math.abs(dy)){dx>0?navRight():navLeft();}
+        else{
+            // Swipe vertical : tilt d'abord, flip si rien ne bouge
+            const tiltDir = dy>0 ? 1 : -1;
+            if(!tiltGravity(tiltDir)){
+                dy<0?flipUp():flipDown();
+            }
+        }
+    }
+    pStart=null;pSat=null;pCube=false;
+});
+canvas.addEventListener('pointercancel',()=>{pStart=null;pSat=null;pCube=false;});
+
+// ═══ WHEEL + KEY ═══
+
+let wx=0,wy=0,wcd=false,wt=null;
+canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    if(wcd||busy||isAnimating||tiltAnim)return;
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY)){wx+=e.deltaX;}else{wy+=e.deltaY;}
+    clearTimeout(wt);wt=setTimeout(()=>{wx=0;wy=0;},100);
+    if(Math.abs(wx)>50){
+        wx>0?navRight():navLeft();
+        wx=0;wy=0;wcd=true;setTimeout(()=>{wcd=false;},600);
+    } else if(Math.abs(wy)>50){
+        wy>0?flipDown():flipUp();
+        wx=0;wy=0;wcd=true;setTimeout(()=>{wcd=false;},600);
+    }
+},{passive:false});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){navRight();e.preventDefault();}else if(e.key==='ArrowLeft'){navLeft();e.preventDefault();}else if(e.key==='ArrowUp'){if(e.shiftKey)flipUp();else if(!tiltGravity(-1))flipUp();e.preventDefault();}else if(e.key==='ArrowDown'){if(e.shiftKey)flipDown();else if(!tiltGravity(1))flipDown();e.preventDefault();}});
+
+// ═══ UI ═══
+
+const dotsEl=document.getElementById('navDots');
+for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='nav-dot'+(i===0?' active':'');dotsEl.appendChild(d);}
+function updateUI(){
+    const idx=mod(currentIdx);
+    const flipTag=isFlipped?' ⟳':'';
+    document.getElementById('faceLabel').textContent=`${idx+1} / ${TOTAL}${flipTag}`;
+    dotsEl.querySelectorAll('.nav-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+    const c=sats.filter(s=>s.tableau===idx&&!s.locked).length;
+    let t=`T${idx+1} [porte] · ${c} sat${c>1?'s':''}`;if(lockedSat)t+=` · ⟐ flotte`;
+    if(isFlipped)t+=` · retourné`;
+    document.getElementById('infoLine').textContent=t;
+}
+
+// ═══ RESET ═══
+
+document.getElementById('btnReset').addEventListener('click',()=>{
+    if(lockedSat){cubeGroup.attach(lockedSat.mesh);lockedSat.locked=false;}lockedSat=null;
+    let si=0;TABLEAUX.forEach((tab,tIdx)=>{tab.sats.forEach(sd=>{
+        const sat=sats[si++];sat.value=sd.v;sat.state=sd.state||'white';sat.tableau=tIdx;sat.origTableau=tIdx;
+        sat.lx=sd.x;sat.ly=sd.y;sat.origLx=sd.x;sat.origLy=sd.y;sat.locked=false;
+        if(sat.mesh.parent!==cubeGroup)cubeGroup.attach(sat.mesh);sat.mesh.scale.set(1,1,1);
+        const ud=sat.mesh.userData;ud.glowMesh.material.opacity=0;ud.haloMesh.material.opacity=0;
+        const tint=sat.state!=='white'?sat.state:'normal';
+        ud.numMesh.material.map=getDominoTex(sd.v[0],sd.v[1],tint);
+    });});
+    updatePorte([13,11]);cubeGroup.quaternion.identity();targetQuat.identity();
+    currentIdx=0;isAnimating=false;busy=false;navDir=0;flipDir=0;isFlipped=false;
+    refreshZoom();camera.position.set(targetCamX,0,targetCamZ);assignFaces();updateUI();
+});
+
+// ═══ EXPORT JSON ═══
+
+document.getElementById('btnExport').addEventListener('click',()=>{
+    const data={tableaux:[]};
+    // Regrouper les sats par tableau
+    const groups={};
+    sats.forEach(s=>{
+        if(!groups[s.tableau]) groups[s.tableau]=[];
+        const entry={x:Math.round(s.lx*100)/100, y:Math.round(s.ly*100)/100, v:[...s.value]};
+        if(s.state&&s.state!=='white') entry.state=s.state;
+        groups[s.tableau].push(entry);
+    });
+    // Trier par index de tableau
+    const keys=Object.keys(groups).map(Number).sort((a,b)=>a-b);
+    keys.forEach(k=>{
+        data.tableaux.push({name:'T'+(k+1), sats:groups[k]});
+    });
+    data.porte=[...porteValue];
+    const json=JSON.stringify(data,null,2);
+    // Copier dans le presse-papier
+    navigator.clipboard.writeText(json).then(()=>{
+        document.getElementById('infoLine').textContent='JSON copié !';
+        setTimeout(updateUI,1500);
+    }).catch(()=>{
+        // Fallback: prompt
+        prompt('JSON exporté :', json);
+    });
+});
+
+// ═══ AXE CENTRAL ═══
+
+document.getElementById('btnCenter').addEventListener('click',()=>{
+    const el=document.getElementById('centerLine');
+    el.style.display=el.style.display==='none'?'block':'none';
+});
+
+// ═══ BACKGROUND MODES — multi-couches scrollantes ═══
+
+const BG_MODES = ['stars','grid','nebula','dust','off'];
+const BG_LABELS = ['étoiles ✦','grille ⊞','nebula ☁','poussière ·','off'];
+let bgMode = 0;
+
+// ── Mode 0 : Étoiles — 3 couches à profondeurs différentes ──
+const starLayers = [];
+const STAR_CONFIGS = [
+    {count:80,  depth:[-8,-25],  speed:2.5, size:0.18, opacity:0.55, spread:50},
+    {count:150, depth:[-25,-55], speed:1.2, size:0.10, opacity:0.35, spread:65},
+    {count:250, depth:[-55,-90], speed:0.4, size:0.05, opacity:0.18, spread:80},
+];
+STAR_CONFIGS.forEach(cfg=>{
+    const geo=new THREE.BufferGeometry();
+    const pos=new Float32Array(cfg.count*3);
+    const speeds=new Float32Array(cfg.count);
+    for(let i=0;i<cfg.count;i++){
+        pos[i*3]=(Math.random()-0.5)*cfg.spread;
+        pos[i*3+1]=(Math.random()-0.5)*cfg.spread*0.7;
+        pos[i*3+2]=cfg.depth[0]+Math.random()*(cfg.depth[1]-cfg.depth[0]);
+        speeds[i]=cfg.speed*(0.5+Math.random());
+    }
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const mat=new THREE.PointsMaterial({color:0x7ec8e3,size:cfg.size,transparent:true,opacity:cfg.opacity,depthWrite:false});
+    const pts=new THREE.Points(geo,mat);
+    scene.add(pts);
+    starLayers.push({pts,geo,speeds,cfg});
+});
+
+// ── Mode 1 : Grille — 2 couches (proche + lointaine) ──
+const gridLayers = [];
+const GRID_CONFIGS = [
+    {depth:-12, step:2,  span:40, opacity:0.09, color:0x7ec8e3, scrollSpeed:0.8},
+    {depth:-35, step:4,  span:60, opacity:0.04, color:0x5a9ab5, scrollSpeed:0.3},
+];
+GRID_CONFIGS.forEach(cfg=>{
+    const grp=new THREE.Group();
+    const mat=new THREE.LineBasicMaterial({color:cfg.color,transparent:true,opacity:cfg.opacity,depthWrite:false});
+    for(let x=-cfg.span;x<=cfg.span;x+=cfg.step){
+        const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x,-cfg.span,cfg.depth),new THREE.Vector3(x,cfg.span,cfg.depth)]);
+        grp.add(new THREE.Line(g,mat));
+    }
+    for(let y=-cfg.span;y<=cfg.span;y+=cfg.step){
+        const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-cfg.span,y,cfg.depth),new THREE.Vector3(cfg.span,y,cfg.depth)]);
+        grp.add(new THREE.Line(g,mat));
+    }
+    grp.visible=false;
+    scene.add(grp);
+    gridLayers.push({grp,cfg});
+});
+
+// ── Mode 2 : Nebula — 3 couches de brume ──
+const nebulaLayers = [];
+const NEB_CONFIGS = [
+    {count:5,  depth:[-10,-20], scale:[10,18], opacity:0.10, speed:0.20, hueRange:[190,220]},
+    {count:8,  depth:[-25,-40], scale:[12,22], opacity:0.06, speed:0.10, hueRange:[200,230]},
+    {count:6,  depth:[-45,-65], scale:[15,28], opacity:0.03, speed:0.05, hueRange:[210,240]},
+];
+NEB_CONFIGS.forEach(cfg=>{
+    const grp=new THREE.Group();
+    const sprites=[];
+    for(let i=0;i<cfg.count;i++){
+        const nc=document.createElement('canvas'); nc.width=128; nc.height=128;
+        const nctx=nc.getContext('2d');
+        const hue=cfg.hueRange[0]+Math.random()*(cfg.hueRange[1]-cfg.hueRange[0]);
+        const ng=nctx.createRadialGradient(64,64,0,64,64,64);
+        ng.addColorStop(0,`hsla(${hue},60%,60%,${cfg.opacity})`);
+        ng.addColorStop(0.4,`hsla(${hue},50%,40%,${cfg.opacity*0.5})`);
+        ng.addColorStop(1,'rgba(0,0,0,0)');
+        nctx.fillStyle=ng; nctx.fillRect(0,0,128,128);
+        const nTex=new THREE.CanvasTexture(nc);
+        const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:nTex,transparent:true,opacity:0.7,depthWrite:false}));
+        const sc=cfg.scale[0]+Math.random()*(cfg.scale[1]-cfg.scale[0]);
+        sp.scale.set(sc,sc,1);
+        sp.position.set((Math.random()-0.5)*55,(Math.random()-0.5)*35,cfg.depth[0]+Math.random()*(cfg.depth[1]-cfg.depth[0]));
+        sp.userData.vx=(Math.random()-0.5)*cfg.speed;
+        sp.userData.vy=(Math.random()-0.5)*cfg.speed*0.5;
+        sprites.push(sp);
+        grp.add(sp);
+    }
+    grp.visible=false;
+    scene.add(grp);
+    nebulaLayers.push({grp,sprites,cfg});
+});
+
+// ── Mode 3 : Poussière cosmique — 3 couches ──
+const dustLayers = [];
+const DUST_CONFIGS = [
+    {count:60,  depth:[-3,-15],  size:0.08, opacity:0.40, driftSpeed:0.08, spread:35},
+    {count:100, depth:[-15,-35], size:0.05, opacity:0.25, driftSpeed:0.04, spread:45},
+    {count:150, depth:[-35,-60], size:0.03, opacity:0.12, driftSpeed:0.02, spread:60},
+];
+DUST_CONFIGS.forEach(cfg=>{
+    const geo=new THREE.BufferGeometry();
+    const pos=new Float32Array(cfg.count*3);
+    const vel=[];
+    for(let i=0;i<cfg.count;i++){
+        pos[i*3]=(Math.random()-0.5)*cfg.spread;
+        pos[i*3+1]=(Math.random()-0.5)*cfg.spread*0.7;
+        pos[i*3+2]=cfg.depth[0]+Math.random()*(cfg.depth[1]-cfg.depth[0]);
+        vel.push({x:(Math.random()-0.5)*cfg.driftSpeed, y:(Math.random()-0.5)*cfg.driftSpeed*0.6, z:(Math.random()-0.5)*cfg.driftSpeed*0.3});
+    }
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const mat=new THREE.PointsMaterial({color:0x7ec8e3,size:cfg.size,transparent:true,opacity:cfg.opacity,depthWrite:false});
+    const pts=new THREE.Points(geo,mat);
+    pts.visible=false;
+    scene.add(pts);
+    dustLayers.push({pts,geo,vel,cfg});
+});
+
+// ── Visibility ──
+function updateBgVisibility(){
+    starLayers.forEach(l=>l.pts.visible=(bgMode===0));
+    gridLayers.forEach(l=>l.grp.visible=(bgMode===1));
+    nebulaLayers.forEach(l=>l.grp.visible=(bgMode===2));
+    dustLayers.forEach(l=>l.pts.visible=(bgMode===3));
+}
+updateBgVisibility();
+
+// ── Tick ──
+function tickBg(t, dt){
+    // Étoiles multi-couches — chaque couche scroll à sa vitesse
+    if(bgMode===0){
+        starLayers.forEach(layer=>{
+            const p=layer.geo.attributes.position.array;
+            const n=layer.cfg.count;
+            for(let i=0;i<n;i++){
+                p[i*3+2]+=layer.speeds[i]*dt;
+                if(p[i*3+2]>layer.cfg.depth[0]+5){
+                    p[i*3+2]=layer.cfg.depth[1];
+                    p[i*3]=(Math.random()-0.5)*layer.cfg.spread;
+                    p[i*3+1]=(Math.random()-0.5)*layer.cfg.spread*0.7;
                 }
             }
-        }
-
-        // =====================================================
-        // AUTO ROTATION
-        // =====================================================
-        function stopAutoRotation() {
-            AUTO.isActive = false;
-            AUTO.currentSpeed = 0;
-            AUTO.rampStartTime = null;
-            if (AUTO.resumeTimeout) { clearTimeout(AUTO.resumeTimeout); AUTO.resumeTimeout = null; }
-            document.querySelectorAll('.crown').forEach(c => c.classList.remove('auto-rotating'));
-        }
-
-        function scheduleAutoResume() {
-            if (AUTO.resumeTimeout) clearTimeout(AUTO.resumeTimeout);
-            AUTO.resumeTimeout = setTimeout(startAutoRotation, AUTO.resumeDelay);
-        }
-
-        function startAutoRotation() {
-            AUTO.isActive = true;
-            AUTO.currentSpeed = 0;
-            AUTO.rampStartTime = performance.now();
-            document.querySelectorAll('.crown').forEach(c => c.classList.add('auto-rotating'));
-        }
-
-        function updateAutoRotation(ts) {
-            if (!AUTO.isActive) return;
-            if (AUTO.rampStartTime !== null) {
-                const elapsed = ts - AUTO.rampStartTime;
-                const progress = Math.min(elapsed / AUTO.rampDuration, 1);
-                AUTO.currentSpeed = AUTO.targetSpeed * (1 - Math.pow(1 - progress, 3));
-                if (progress >= 1) AUTO.rampStartTime = null;
+            layer.geo.attributes.position.needsUpdate=true;
+        });
+    }
+    // Grille multi-couches — chaque couche scroll Y à sa vitesse
+    if(bgMode===1){
+        gridLayers.forEach(layer=>{
+            layer.grp.position.y=-((t*layer.cfg.scrollSpeed)%layer.cfg.step);
+        });
+    }
+    // Nebula multi-couches — drift lent par couche
+    if(bgMode===2){
+        nebulaLayers.forEach(layer=>{
+            layer.sprites.forEach(s=>{
+                s.position.x+=s.userData.vx*dt;
+                s.position.y+=s.userData.vy*dt;
+                if(s.position.x>30)s.position.x=-30;
+                if(s.position.x<-30)s.position.x=30;
+                if(s.position.y>20)s.position.y=-20;
+                if(s.position.y<-20)s.position.y=20;
+            });
+        });
+    }
+    // Poussière multi-couches — drift organique
+    if(bgMode===3){
+        dustLayers.forEach(layer=>{
+            const p=layer.geo.attributes.position.array;
+            const hl=layer.cfg.spread/2;
+            for(let i=0;i<layer.cfg.count;i++){
+                p[i*3]+=layer.vel[i].x*dt;
+                p[i*3+1]+=layer.vel[i].y*dt;
+                p[i*3+2]+=layer.vel[i].z*dt;
+                if(Math.abs(p[i*3])>hl)layer.vel[i].x*=-1;
+                if(Math.abs(p[i*3+1])>hl*0.7)layer.vel[i].y*=-1;
+                if(p[i*3+2]>layer.cfg.depth[0])layer.vel[i].z*=-1;
+                if(p[i*3+2]<layer.cfg.depth[1])layer.vel[i].z*=-1;
             }
-            const dt = (ts - lastFrameTime) / 1000;
-            globalRotation += AUTO.currentSpeed * dt;
-            updateAllRotations();
-        }
+            layer.geo.attributes.position.needsUpdate=true;
+        });
+    }
+}
 
-        function animationLoop(ts) {
-            if (lastFrameTime === 0) lastFrameTime = ts;
-            updateAutoRotation(ts);
-            lastFrameTime = ts;
-            requestAnimationFrame(animationLoop);
-        }
+// ── Bouton switcher ──
+document.getElementById('btnBg').addEventListener('click',()=>{
+    bgMode=(bgMode+1)%BG_MODES.length;
+    updateBgVisibility();
+    document.getElementById('btnBg').textContent='fond: '+BG_LABELS[bgMode];
+});
 
-        // =====================================================
-        // INTERACTION HELPERS
-        // =====================================================
-        function sanitizeDelta(px) {
-            if (Math.abs(px) > INTERACTION.maxPixels) return 0;
-            let deg = px * INTERACTION.sensitivity;
-            return Math.max(-INTERACTION.maxDelta, Math.min(INTERACTION.maxDelta, deg));
+// ═══ TRANSPARENCE DOMINOS ═══
+let domAlpha = 1.0;
+document.getElementById('sliderAlpha').addEventListener('input',(e)=>{
+    domAlpha = parseInt(e.target.value)/100;
+    document.getElementById('alphaVal').textContent=e.target.value+'%';
+    sats.forEach(sat=>{
+        const ud=sat.mesh.userData;
+        if(ud.bgMesh) ud.bgMesh.material.opacity=domAlpha;
+        if(ud.boxMesh){
+            if(Array.isArray(ud.boxMesh.material)){
+                ud.boxMesh.material.forEach(m=>{ m.opacity=m._baseOp*domAlpha; });
+            } else { ud.boxMesh.material.opacity=ud.boxMesh.material._baseOp*domAlpha; }
         }
+        if(ud.shadowMesh) ud.shadowMesh.material.opacity=0.6*domAlpha;
+    });
+});
 
-        function snapToGrid(rotation) {
-            const norm = ((rotation % 360) + 360) % 360;
-            return Math.round((norm - INITIAL_ROTATION) / ANGLE_STEP) * ANGLE_STEP + INITIAL_ROTATION;
+// ═══ TILT (gravité par inclinaison) ═══
+
+let tiltAnim = null;
+
+function tiltGravity(dirY){
+    if(busy||isAnimating||swapAnim||tiltAnim) return false;
+    const fIdx = mod(currentIdx);
+    const faceSats = sats.filter(s => s.tableau === fIdx && !s.locked);
+    if(faceSats.length === 0) return false;
+    
+    const gravity = -dirY;
+    faceSats.sort((a,b) => gravity > 0 ? b.ly - a.ly : a.ly - b.ly);
+    
+    const occupied = new Set();
+    occupied.add('0|0');
+    sats.forEach(s => {
+        if(s.tableau === fIdx && s.locked) occupied.add(Math.round(s.lx*100)+'|'+Math.round(s.ly*100));
+    });
+    
+    const moves = [];
+    faceSats.forEach(s => {
+        const key = () => Math.round(s.lx*100)+'|'+Math.round(s.ly*100);
+        occupied.delete(key());
+        let newY = s.ly;
+        const targetY = s.ly + gravity * GAP;
+        const targetKey = Math.round(s.lx*100)+'|'+Math.round(targetY*100);
+        if(!occupied.has(targetKey)) newY = targetY;
+        if(newY !== s.ly) moves.push({sat: s, fromX: s.lx, fromY: s.ly, toX: s.lx, toY: newY});
+        s.ly = newY;
+        occupied.add(Math.round(s.lx*100)+'|'+Math.round(s.ly*100));
+    });
+    
+    if(moves.length === 0) return false;
+    
+    tiltAnim = {
+        moves, gravity, t: 0, phase: 'tilt',
+        tiltAngle: gravity > 0 ? -0.22 : 0.22,
+        origQuat: cubeGroup.quaternion.clone(),
+    };
+    return true;
+}
+
+function tickTiltAnim(dt){
+    if(!tiltAnim) return;
+    const ta = tiltAnim;
+    ta.t += dt;
+    
+    if(ta.phase === 'tilt'){
+        const p = Math.min(1, ta.t / 0.2);
+        const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2,2)/2;
+        const angle = ta.tiltAngle * ease;
+        const tiltQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), angle);
+        cubeGroup.quaternion.copy(ta.origQuat).multiply(tiltQ);
+        if(p >= 1){ ta.phase = 'slide'; ta.t = 0; }
+    }
+    else if(ta.phase === 'slide'){
+        const p = Math.min(1, ta.t / 0.3);
+        const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2,2)/2;
+        ta.moves.forEach(m => {
+            m.sat.mesh.position.y = m.fromY + (m.toY - m.fromY) * ease;
+        });
+        if(p >= 1){
+            ta.moves.forEach(m => { placeSat(m.sat, FACE_ROT[0]); });
+            ta.phase = 'recover'; ta.t = 0;
         }
-
-        function snapGlobal() {
-            globalRotation = snapToGrid(globalRotation);
-            updateAllRotations();
+    }
+    else if(ta.phase === 'recover'){
+        const p = Math.min(1, ta.t / 0.3);
+        const ease = 1 - Math.pow(1 - p, 3);
+        const angle = ta.tiltAngle * (1 - ease);
+        const tiltQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), angle);
+        cubeGroup.quaternion.copy(ta.origQuat).multiply(tiltQ);
+        if(p >= 1){
+            cubeGroup.quaternion.copy(ta.origQuat);
+            tiltAnim = null;
+            assignFaces(); refreshZoom(); updateUI();
         }
+    }
+}
 
-        function snapCrown(idx) {
-            crownRotations[idx] = Math.round(crownRotations[idx] / ANGLE_STEP) * ANGLE_STEP;
-            updateAllRotations();
+// ═══ RENDER ═══
+
+const clock=new THREE.Clock();
+let lastTime=0;
+let flipProgress=0;
+let flipMidSwapped=false;
+function animate(){
+    requestAnimationFrame(animate);const t=clock.getElapsedTime();const dt=t-lastTime;lastTime=t;
+    if(isAnimating){
+        if(flipDir!==0){
+            flipProgress=Math.min(1, flipProgress+dt*1.8);
+            const ease=flipProgress<0.5?2*flipProgress*flipProgress:(1-Math.pow(-2*flipProgress+2,2)/2);
+            const angle=ease*Math.PI*flipDir;
+            cubeGroup.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0), angle);
+            // À 90° (invisible) : swap texture porte pour que l'arrivée à 180° = visuellement identique
+            if(!flipMidSwapped && ease>=0.5){
+                flipMidSwapped=true;
+                updatePorte([porteValue[1],porteValue[0]]);
+            }
+            if(flipProgress>=1){
+                cubeGroup.quaternion.identity();targetQuat.identity();
+                flipProgress=0;flipMidSwapped=false;onRotationComplete();
+            }
+        } else {
+            cubeGroup.quaternion.slerp(targetQuat,0.12);
+            if(1-Math.abs(cubeGroup.quaternion.dot(targetQuat))<0.0001){cubeGroup.quaternion.copy(targetQuat);onRotationComplete();}
         }
-
-        function getRowFromY(y) {
-            const rect = document.getElementById('scene').getBoundingClientRect();
-            const relY = y - rect.top;
-            const zoneH = 480 / ROWS;
-            if (relY < 0) return 0;
-            if (relY >= 480) return ROWS - 1;
-            return Math.min(Math.floor(relY / zoneH), ROWS - 1);
+    }
+    tickSwapAnim(dt);
+    tickTiltAnim(dt);
+    tickBg(t, dt);
+    // Halo ice pulse
+    const hp=0.5+0.5*Math.sin(t*1.8);
+    haloSpriteMat.opacity=0.4+hp*0.35;
+    camera.position.x+=(targetCamX-camera.position.x)*0.08;
+    camera.position.z+=(targetCamZ-camera.position.z)*0.08;
+    camera.lookAt(camera.position.x, 0, 0);
+    const fIdx=mod(currentIdx);
+    // Trouver le satellite sous le flottant (le plus proche sur le tableau courant)
+    let hoveredSat=null;
+    if(lockedSat){
+        const wp=new THREE.Vector3();lockedSat.mesh.getWorldPosition(wp);
+        const lp=cubeGroup.worldToLocal(wp.clone());
+        let bestD=GAP*0.9, bestS=null;
+        sats.forEach(s=>{
+            if(s===lockedSat||s.locked||s.tableau!==fIdx)return;
+            const d=Math.hypot(s.lx-lp.x,s.ly-lp.y);
+            if(d<bestD){bestD=d;bestS=s;}
+        });
+        hoveredSat=bestS;
+    }
+    sats.forEach((sat,si)=>{const ud=sat.mesh.userData;
+        // ── Micro-tilt respiration (chaque domino a un offset unique) ──
+        if(sat.mesh.visible && !sat.locked && !isAnimating && !swapAnim && sat.baseQuat){
+            const phase = t*1.2 + si*1.7;
+            const tiltX = Math.sin(phase) * 0.012;
+            const tiltY = Math.cos(phase*0.7) * 0.008;
+            const breathQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(tiltX, 0, tiltY));
+            sat.mesh.quaternion.copy(sat.baseQuat).multiply(breathQ);
         }
-
-        function setDragging(crownIdx, on) {
-            const crowns = document.querySelectorAll('.crown');
-            if (crownIdx === -1) {
-                crowns.forEach(c => on ? c.classList.add('dragging') : c.classList.remove('dragging'));
-            } else if (crowns[crownIdx]) {
-                on ? crowns[crownIdx].classList.add('dragging') : crowns[crownIdx].classList.remove('dragging');
+        if(sat.locked){sat.mesh.visible=true;const p=0.5+0.5*Math.sin(t*3.5);
+            ud.glowMesh.material.opacity=0.2+p*0.35;ud.haloMesh.material.opacity=0.05+p*0.1;
+            ud.numMesh.material.map=getDominoTex(sat.value[0],sat.value[1],'cyan');
+            ud.edgeLines.material.color.set(0x5eefff);ud.edgeLines.material.opacity=0.35;
+        } else {
+            // Masquer si position source OU si sous le flottant
+            if(isHiddenBySrc(sat)||sat===hoveredSat){sat.mesh.visible=false;}
+            else if(!isAnimating){sat.mesh.visible=(sat.tableau===fIdx);}
+            ud.glowMesh.material.opacity=0;ud.haloMesh.material.opacity=0;
+            const st=sat.state||'white';
+            let tint=(st!=='white'?st:'normal');
+            ud.numMesh.material.map=getDominoTex(sat.value[0],sat.value[1],tint);
+            // Edge + glow selon state
+            if(st==='cosmic'){
+                // Cosmic : bordure cycle violet→cyan→rose, halo pulsant violet
+                const cPhase=t*1.5+si;
+                const cr=Math.sin(cPhase)*0.5+0.5, cg=Math.sin(cPhase+2.1)*0.5+0.5, cb=Math.sin(cPhase+4.2)*0.5+0.5;
+                ud.edgeLines.material.color.setRGB(0.5+cr*0.5, cg*0.5, 0.5+cb*0.5);
+                ud.edgeLines.material.opacity=0.35+Math.sin(t*2)*0.1;
+                const cp=0.3+0.2*Math.sin(t*2+si);
+                ud.glowMesh.material.color.set(0x8338ec);ud.glowMesh.material.opacity=cp;
+                ud.haloMesh.material.color.set(0x8338ec);ud.haloMesh.material.opacity=cp*0.4;
+            } else if(st==='supernovae'){
+                // Supernovae : bordure cycle orange→doré→jaune, halo pulsant intense
+                const sPhase=t*2+si;
+                const sr=1, sg=0.4+Math.sin(sPhase)*0.35, sb=Math.sin(sPhase*0.7)*0.15;
+                ud.edgeLines.material.color.setRGB(sr, sg, sb);
+                ud.edgeLines.material.opacity=0.4+Math.sin(t*2.5)*0.15;
+                const sp=0.4+0.25*Math.sin(t*2.5+si);
+                ud.glowMesh.material.color.set(0xff8c00);ud.glowMesh.material.opacity=sp;
+                ud.haloMesh.material.color.set(0xffd700);ud.haloMesh.material.opacity=sp*0.5;
+            } else {
+                const eCol = st==='silver'?0x22d3ee : st==='gold'?0xffd700 : st==='emerald'?0x34d399 : 0x7ec8e3;
+                ud.edgeLines.material.color.set(eCol);
+                ud.edgeLines.material.opacity=0.18;
             }
         }
-
-        // =====================================================
-        // EVENTS — SWIPE ZONE (global rotation)
-        // =====================================================
-        const swipeZone = document.getElementById('swipeZone');
-        const scene = document.getElementById('scene');
-
-        function onStart() { stopAutoRotation(); }
-        function onEnd() { scheduleAutoResume(); }
-
-        swipeZone.addEventListener('pointerdown', (e) => {
-            onStart();
-            isDraggingGlobal = true;
-            lastX = e.clientX;
-            setDragging(-1, true);
-            swipeZone.setPointerCapture(e.pointerId);
-        });
-        swipeZone.addEventListener('pointermove', (e) => {
-            if (!isDraggingGlobal) return;
-            const dx = e.clientX - lastX;
-            const deg = sanitizeDelta(dx);
-            if (deg !== 0) { globalRotation += deg; updateAllRotations(); }
-            lastX = e.clientX;
-        });
-        swipeZone.addEventListener('pointerup', () => {
-            if (isDraggingGlobal) {
-                isDraggingGlobal = false;
-                setDragging(-1, false);
-                snapGlobal();
-                onEnd();
-            }
-        });
-
-        // =====================================================
-        // EVENTS — SCENE (crown rotation)
-        // =====================================================
-        scene.addEventListener('pointerdown', (e) => {
-            if (e.target.closest('.cube-cell')) return; // let cube handle taps
-            onStart();
-            activeCrown = getRowFromY(e.clientY);
-            lastX = e.clientX;
-            dragStartX = lastX;
-            currentGesture = 'idle';
-        });
-
-        document.addEventListener('pointermove', (e) => {
-            if (isDraggingGlobal) return;
-            if (activeCrown < 0) return;
-
-            const dx = e.clientX - dragStartX;
-            if (currentGesture === 'idle' && Math.abs(dx) > INTERACTION.directionThreshold) {
-                currentGesture = 'drag';
-                isDraggingCrown = true;
-                setDragging(activeCrown, true);
-            }
-
-            if (currentGesture === 'drag') {
-                const dpx = e.clientX - lastX;
-                const deg = sanitizeDelta(dpx);
-                if (deg !== 0) { crownRotations[activeCrown] += deg; updateAllRotations(); }
-            }
-            lastX = e.clientX;
-        });
-
-        document.addEventListener('pointerup', () => {
-            if (isDraggingCrown && activeCrown >= 0) {
-                setDragging(activeCrown, false);
-                snapCrown(activeCrown);
-                onEnd();
-            }
-            if (activeCrown >= 0 && currentGesture === 'idle') onEnd();
-            isDraggingCrown = false;
-            activeCrown = -1;
-            currentGesture = 'idle';
-        });
-
-        // =====================================================
-        // WHEEL
-        // =====================================================
-        document.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            onStart();
-            const dpx = e.deltaX !== 0 ? e.deltaX : e.deltaY;
-            const deg = sanitizeDelta(dpx * 0.5);
-            if (deg !== 0) { globalRotation += deg; updateAllRotations(); }
-            clearTimeout(window._wt);
-            window._wt = setTimeout(() => { snapGlobal(); onEnd(); }, 150);
-        }, { passive: false });
-
-        // =====================================================
-        // KEYBOARD
-        // =====================================================
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') { onStart(); globalRotation += ANGLE_STEP; updateAllRotations(); onEnd(); }
-            if (e.key === 'ArrowRight') { onStart(); globalRotation -= ANGLE_STEP; updateAllRotations(); onEnd(); }
-        });
-
-        // =====================================================
-        // INIT
-        // =====================================================
-        buildCylinder();
-        requestAnimationFrame(animationLoop);
-        startAutoRotation();
-    </script>
+    });
+    renderer.render(scene,camera);
+}
+assignFaces();updateUI();animate();
+</script>
 </body>
 </html>
